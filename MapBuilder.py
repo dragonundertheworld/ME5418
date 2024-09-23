@@ -24,7 +24,7 @@ def save_amd_show_map(map):
     # save map files
     timestamp = time.strftime("%Y-%m-%d_%H-%M-%S")
     file_name = f"map_{timestamp}.{'txt'}"  
-    file_path = f'ME5418/test_map/{file_name}'
+    file_path = f'./test_map/{file_name}'
     with open(file_path, 'w') as file:
         file.write(np.array2string(map))
 

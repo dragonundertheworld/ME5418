@@ -1,4 +1,5 @@
 import numpy as np
+import MapBuilder
 
 class DummyGym:
     def __init__(self, init_pos=(0, 0), map_size=(10, 10), num_of_obstacles=5, FOV=(5, 5), see_through=False, map_file_path=None, is_slippery=False):
@@ -16,14 +17,10 @@ class DummyGym:
     def _create_map(self, map_file_path):
         if map_file_path:
             # Load from file
-            pass  # Add logic for loading map
+            return np.loadtxt(map_file_path)
         else:
-            # Randomly generate obstacles
-            map = np.zeros(self.map_size)
-            for _ in range(self.num_of_obstacles):
-                obs_pos = (np.random.randint(0, self.map_size[0]), np.random.randint(0, self.map_size[1]))
-                map[obs_pos] = 1  # Mark as obstacle
-            return map
+            # Generate random map
+            return MapBuilder.MapBuilder(self.map_size[0], self.map_size[1])
 
     def action_space(self):
         return ['Up', 'Down', 'Left', 'Right']

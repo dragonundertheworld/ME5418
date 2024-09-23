@@ -91,7 +91,7 @@ class DummyGym:
         plt.show()
 
 # Example Usage
-env = DummyGym(init_pos=(2,3), map_size=(10,10), num_of_obstacles=20, FOV=(5,5), see_through=False)
+env = DummyGym(init_pos=(2,3), map_size=(30,30), num_of_obstacles=140, FOV=(5,5), see_through=False) # num_of_obstacles没有用到，不知道以后要不要用地图大小和障碍物数量创建地图
 print("Action space: ", env.action_space())
 print("Observation space: ", env.observation_space())
 env.render()

@@ -18,7 +18,9 @@ def MapBuilder(row, col):
                 dfs(nx, ny)
     
     dfs(1, 1)
+    return map
 
+def save_amd_show_map(map):
     # save map files
     timestamp = time.strftime("%Y-%m-%d_%H-%M-%S")
     file_name = f"map_{timestamp}.{'txt'}"  
@@ -33,4 +35,5 @@ def MapBuilder(row, col):
     plt.show()
 
 
-matrix = MapBuilder(30, 30)
+# matrix = MapBuilder(30, 30)
+# save_amd_show_map(matrix)

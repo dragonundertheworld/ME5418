@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 from map_generate import create_random_shape_map
+import MapBuilder
 
 obstacle = 1
 free_space = 0
@@ -29,20 +30,12 @@ class DummyGym:
                 raise ValueError("Invalid map file path!")
             # Load from file
             map = np.loadtxt(map_file_path)
+            return map
         else:
+            return MapBuilder.MapBuilder(self.map_size[0], self.map_size[1])
             # Generate random-shape map
             # 其实和矩形地图差不多
-            map = create_random_shape_map(self.map_size, self.map_size[0]*self.map_size[1]//2, self.num_of_obstacles)
-            return map
-            # Generate squared map
-            # max_obstacles = self.map_size[0] * self.map_size[1] - 1  # One cell reserved for car
-            # if self.num_of_obstacles >= max_obstacles:
-            #     raise ValueError("Too many obstacles! Map is unsolvable.")
-            # # Randomly generate obstacles
-            # map = np.zeros(self.map_size)
-            # for _ in range(self.num_of_obstacles):
-            #     obs_pos = (np.random.randint(0, self.map_size[0]), np.random.randint(0, self.map_size[1]))
-            #     map[obs_pos] = 1  # Mark as obstacle
+            # map = create_random_shape_map(self.map_size, self.map_size[0]*self.map_size[1]//2, self.num_of_obstacles)
             # return map
     
     def _place_car(self):

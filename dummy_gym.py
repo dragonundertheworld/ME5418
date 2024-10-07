@@ -22,27 +22,47 @@ import MapBuilder
         - Big reward for completing exploration (5)
 '''
 
-# Constants
-obstacle = 1
-free_space = 0
-car = 2
-explored = -1
+# Map grid values
+OBSTACLE = 1
+UNEXPLORED = 0
+CAR = 2
+
+# Initial values
+INIT_POS = (12, 10)
+CAR_SIZE = (7, 7)
+STEP_SIZE = 5
+MAP_SIZE = (40, 21)
+NUM_OF_OBSTACLES = 10
+FOV = (10, 10)
+
+# Rewards and penalties
+COLLISION_PENALTY = -1
+EXPLORATION_REWARD = 0.01
+REVISIT_PENALTY = -0.01
+MOVEMENT_PENALTY = -0.1
+STATIONARY_PENALTY = -0.5
+FINISH_REWARD = 5
 
 class DummyGym(gym.Env):
-    def __init__(self, init_pos=(2, 3), car_size=(1,1), step_size=1, map_size=(10, 10), num_of_obstacles=5, FOV=(5, 5), see_through=False, map_file_path=None, is_slippery=False):
+    def __init__(self, init_pos=(2, 3), car_size=(1,1), step_size=1, map_size=(10, 10), num_of_obstacles=5, fov=(5, 5), see_through=False, map_file_path=None, is_slippery=False):
         super(DummyGym, self).__init__()
         self.car_size = car_size
         self.step_size = step_size
         self.map_size = map_size
         self.num_of_obstacles = num_of_obstacles
         self.init_pos = init_pos if init_pos else self._place_car()
-        self.FOV = FOV
+        self.fov = fov
         self.see_through = see_through
         self.is_slippery = is_slippery
         self.car_pos = self.init_pos
+        self.COLLISION_FLAG = False
+        self.SLIPPERY_FLAG = False
         
         # Create the map
         self.map = self._create_map(map_file_path)
+
+        # Initialize fov_map
+        self.fov_map = np.zeros(self.fov)
         
         # Initialize visit counts for each grid
         self.visit_count = np.zeros(self.map_size)
@@ -50,8 +70,8 @@ class DummyGym(gym.Env):
         # Action space: 4 discrete actions (Up, Down, Left, Right)
         self.action_space = spaces.Discrete(4)  # 0: Up, 1: Down, 2: Left, 3: Right
         
-        # Observation space: 2D map (grayscale FOV), visit counts
-        self.observation_space = spaces.Box(low=0, high=1, shape=FOV, dtype=np.float32)
+        # Observation space: 2D map (grayscale fov), visit counts
+        self.observation_space = spaces.Box(low=0, high=1, shape=fov, dtype=np.float32)
         
         # Initial state
         self.state = self._observe()
@@ -66,34 +86,77 @@ class DummyGym(gym.Env):
             return MapBuilder.MapBuilder(self.map_size[0], self.map_size[1])
 
     def _place_car(self):
+        # Randomly place the car in the map without car_size overlapping with obstacles
         while True:
-            self.car_pos = (np.random.randint(0, self.map_size[0] - self.car_size[0] + 1), 
-                            np.random.randint(0, self.map_size[1] - self.car_size[1] + 1))
-            is_empty = True
-            for i in range(self.car_size[0]):
-                for j in range(self.car_size[1]):
-                    if self.map[self.car_pos[0] + i, self.car_pos[1] + j] != 0:
-                        is_empty = False
-                        break
-                if not is_empty:
-                    break
-            if is_empty:
+            car_pos = (np.random.randint(0, self.map_size[0]), np.random.randint(0, self.map_size[1]))
+            if np.all(self.map[car_pos[0]:car_pos[0]+self.car_size[0], car_pos[1]:car_pos[1]+self.car_size[1]] == 0):
+                self.car_pos = car_pos
                 break
 
-    # Get FOV grid locations
+    # Get fov grid locations
     def _get_fov_grids_location(self):
         x = self.car_pos[0]
         y = self.car_pos[1]
-        fov_x_min = max(0, x - self.FOV[0] // 2)
-        fov_x_max = min(self.map_size[0], x + self.FOV[0] // 2)
-        fov_y_min = max(0, y - self.FOV[1] // 2)
-        fov_y_max = min(self.map_size[1], y + self.FOV[1] // 2)
-        fov_grids_location = [(i, j) for i in range(fov_x_min, fov_x_max) for j in range(fov_y_min, fov_y_max)]
-        return fov_x_min, fov_x_max, fov_y_min, fov_y_max, fov_grids_location
+
+        up_bound_of_fov_in_map = x - self.fov[0] // 2
+        down_bound_of_fov_in_map = x + self.fov[0] // 2
+        left_bound_of_fov_in_map = y - self.fov[1] // 2
+        right_bound_of_fov_in_map = y + self.fov[1] // 2
+
+        up_bound_of_map = 0
+        down_bound_of_map = self.map_size[0]
+        left_bound_of_map = 0
+        right_bound_of_map = self.map_size[1]
+
+        up_bound_of_fov_in_fov = 0
+        down_bound_of_fov_in_fov = self.fov[0]
+        left_bound_of_fov_in_fov = 0
+        right_bound_of_fov_in_fov = self.fov[1]
+
+        fov_grids_location = []
+        
+        # fov_x and fov_y should not be negative if the car is close to the edge of the map
+        if up_bound_of_fov_in_map >= up_bound_of_map:
+            fov_x_min_in_map = up_bound_of_fov_in_map
+            fov_x_min_in_fov = up_bound_of_fov_in_fov
+        else:
+            fov_x_min_in_map = up_bound_of_map
+            fov_x_min_in_fov = -up_bound_of_fov_in_map
+
+        if down_bound_of_fov_in_map < down_bound_of_map:
+            fov_x_max_in_map = down_bound_of_fov_in_map + 1
+            fov_x_max_in_fov = down_bound_of_fov_in_fov
+        else:
+            fov_x_max_in_map = down_bound_of_map
+            fov_x_max_in_fov = down_bound_of_fov_in_fov - (down_bound_of_fov_in_map - down_bound_of_map)
+
+        if left_bound_of_fov_in_map >= left_bound_of_map:
+            fov_y_min_in_map = left_bound_of_fov_in_map
+            fov_y_min_in_fov = left_bound_of_fov_in_fov
+        else:
+            fov_y_min_in_map = left_bound_of_map
+            fov_y_min_in_fov = -left_bound_of_fov_in_map
+
+        if right_bound_of_fov_in_map < right_bound_of_map:
+            fov_y_max_in_map = right_bound_of_fov_in_map + 1
+            fov_y_max_in_fov = right_bound_of_fov_in_fov
+        else:
+            fov_y_max_in_map = right_bound_of_map
+            fov_y_max_in_fov = right_bound_of_fov_in_fov - (right_bound_of_fov_in_map - right_bound_of_map)
+
+        for i in range(fov_x_min_in_map, fov_x_max_in_map): # range(1, 6)= 1, 2, 3, 4, 5
+            for j in range(fov_y_min_in_map, fov_y_max_in_map):
+                fov_grids_location.append((i, j)) # Append the grid location to fov_grids_location
+        return fov_x_min_in_map, fov_x_max_in_map, fov_y_min_in_map, fov_y_max_in_map, fov_x_min_in_fov, fov_x_max_in_fov, fov_y_min_in_fov, fov_y_max_in_fov, fov_grids_location
 
     def _observe(self):
-        fov_x_min, fov_x_max, fov_y_min, fov_y_max, fov_grids_location = self._get_fov_grids_location()
-        self.fov_map = self.map[fov_x_min:fov_x_max, fov_y_min:fov_y_max]
+        fov_x_min_in_map, fov_x_max_in_map, fov_y_min_in_map, fov_y_max_in_map, fov_x_min_in_fov, fov_x_max_in_fov, fov_y_min_in_fov, fov_y_max_in_fov, _ = self._get_fov_grids_location()
+        fov_map = np.full((self.fov[0], self.fov[1]), OBSTACLE)  # Initialize FOV map with obstacles
+
+        # Update FOV map with the actual map
+        fov_map[fov_x_min_in_fov:fov_x_max_in_fov, fov_y_min_in_fov:fov_y_max_in_fov] = self.map[fov_x_min_in_map:fov_x_max_in_map, fov_y_min_in_map:fov_y_max_in_map]
+        fov_map[self.fov[0]//2, self.fov[1]//2] = CAR  # Update car position in FOV map
+        self.fov_map = fov_map
         return self.visit_count, self.fov_map, self.car_pos
 
     # Step function for interacting with the environment
@@ -111,68 +174,89 @@ class DummyGym(gym.Env):
             new_pos = (self.car_pos[0], min(self.car_pos[1]+self.step_size, self.map_size[1]-1))
         else:
             raise ValueError(f"Invalid action: {action}")
-
-        reward = 0
-        done = False
-
-        # Collision check
-        if self.map[new_pos] == 1:  # Obstacle collision
-            reward -= 1
-            new_pos = old_pos
-        else:
-            reward -= 0.1  # Movement penalty
-
-        # Get FOV grid locations and update visit counts
-        _, _, _, _, fov_grids_location = self._get_fov_grids_location()
-        for grid_location in fov_grids_location:
-            if self.visit_count[grid_location] == 0:  # New grid
-                reward += 0.01
-            else:
-                reward -= 0.01 * self.visit_count[grid_location]  # Penalty for revisiting
-            self.visit_count[grid_location] += 1
-
-        # Update car position
+        
         self.car_pos = new_pos
+
+        # Abnormal flags
+        if self.map[self.car_pos] == OBSTACLE:  # Obstacle collision
+            self.COLLISION_FLAG = True
+            self.car_pos = old_pos
+            print("Collision! Car stays in the same position: ", new_pos)
+        else:
+            if self.is_slippery:
+                if np.random.rand() < 0.2: # Slip
+                    self.SLIPPERY_FLAG = True
+                    new_pos = old_pos
+
+        reward, done = self.calculate_reward_and_done()
 
         # Update state
         self.state = self._observe()
+        return self.state, reward, done, {}
+
+    def calculate_reward_and_done(self):
+        reward = 0
+        done = False
+
+        # Abnormal flags handling
+        reward = reward + COLLISION_PENALTY if self.COLLISION_FLAG == True else reward + MOVEMENT_PENALTY # Collision and movement penalty
+        self.COLLISION_FLAG = False
+        # self.SLIPPERY_FLAG = False
+
+        # Get FOV grid locations and update visit counts
+        _, _, _, _, _, _, _, _, fov_grids_location = self._get_fov_grids_location()
+        for grid_location in fov_grids_location:
+            if self.visit_count[grid_location] == UNEXPLORED:  # New grid
+                reward += EXPLORATION_REWARD
+            else:
+                reward += REVISIT_PENALTY * self.visit_count[grid_location]  # Penalty for revisiting
+            self.visit_count[grid_location] += 1
 
         # Check if map is fully explored
         if np.all(self.visit_count != 0):
-            reward += 5  # Big reward for completing exploration
+            reward += FINISH_REWARD  # Big reward for completing exploration
             done = True
-
-        return self.state, reward, done, {}
+        return reward,done
 
     # Reset environment
     def reset(self):
-        self._place_car()
-        self.visit_count = np.zeros(self.map_size)  # Reset visit counts
-        self.state = [self.visit_count, self.get_fov_map()]  # Reset state
+        self.car_pos = self.init_pos
+        self.fov_map = np.zeros(self.fov)
+        self.visit_count = np.zeros(self.map_size)
+        self.state = self._observe()
         return self.state
 
     # Render the environment
     def render(self, map_type):
         if map_type == 'visit_count':
             display_map = np.copy(self.visit_count)
+            display_map[self.car_pos[0], self.car_pos[1]] = CAR
         elif map_type == 'fov_map':
             display_map = np.copy(self.fov_map)
         elif map_type == 'Map':
             display_map = np.copy(self.map)
-        display_map[self.car_pos] = car
+            display_map[self.car_pos[0], self.car_pos[1]] = CAR
         plt.imshow(display_map, cmap='gray', interpolation='none')
         plt.title(map_type)
         plt.colorbar()
         plt.show()
 
 # Example usage:
-env = DummyGym(init_pos=(2,3), map_size=(30,30), num_of_obstacles=140, FOV=(5,5))
+env = DummyGym(map_size=(30,30), num_of_obstacles=140, fov=(5,5))
 env.render('Map')
 env.render('fov_map')
 env.render('visit_count')
 print(env.action_space.n)
 
 # Perform a step
+env.step(0)
+
+# Render the maps after the step
+env.render('Map')
+env.render('fov_map')
+env.render('visit_count')
+
+# Perform another step
 env.step(1)
 
 # Render the maps after the step

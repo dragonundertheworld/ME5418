@@ -55,8 +55,6 @@ class DummyGym(gym.Env):
         self.see_through = see_through
         self.is_slippery = is_slippery
         self.car_pos = self.init_pos
-        self.COLLISION_FLAG = False
-        self.SLIPPERY_FLAG = False
         
         # Create the map
         self.map = self._create_map(map_file_path)
@@ -124,7 +122,7 @@ class DummyGym(gym.Env):
             fov_x_min_in_fov = -up_bound_of_fov_in_map
 
         if down_bound_of_fov_in_map < down_bound_of_map:
-            fov_x_max_in_map = down_bound_of_fov_in_map + 1
+            fov_x_max_in_map = down_bound_of_fov_in_map
             fov_x_max_in_fov = down_bound_of_fov_in_fov
         else:
             fov_x_max_in_map = down_bound_of_map
@@ -138,7 +136,7 @@ class DummyGym(gym.Env):
             fov_y_min_in_fov = -left_bound_of_fov_in_map
 
         if right_bound_of_fov_in_map < right_bound_of_map:
-            fov_y_max_in_map = right_bound_of_fov_in_map + 1
+            fov_y_max_in_map = right_bound_of_fov_in_map
             fov_y_max_in_fov = right_bound_of_fov_in_fov
         else:
             fov_y_max_in_map = right_bound_of_map
@@ -162,6 +160,8 @@ class DummyGym(gym.Env):
     # Step function for interacting with the environment
     def step(self, action):
         old_pos = self.car_pos
+        self.COLLISION_FLAG = False
+        # self.SLIPPERY_FLAG = False
 
         # Map actions to movement
         if action == 0:  # Up
@@ -186,7 +186,14 @@ class DummyGym(gym.Env):
             if self.is_slippery:
                 if np.random.rand() < 0.2: # Slip
                     self.SLIPPERY_FLAG = True
-                    new_pos = old_pos
+                    self.car_pos = old_pos
+                    print("Slippery! Car stays in the same position: ", new_pos)
+                else:
+                    self.SLIPPERY_FLAG = False
+                    print(f"Car moves {self.step_size} from {old_pos} to {new_pos}")
+            else:
+                self.SLIPPERY_FLAG = False
+                print(f"Car moves {self.step_size} from {old_pos} to {new_pos}")
 
         reward, done = self.calculate_reward_and_done()
 
@@ -200,8 +207,6 @@ class DummyGym(gym.Env):
 
         # Abnormal flags handling
         reward = reward + COLLISION_PENALTY if self.COLLISION_FLAG == True else reward + MOVEMENT_PENALTY # Collision and movement penalty
-        self.COLLISION_FLAG = False
-        # self.SLIPPERY_FLAG = False
 
         # Get FOV grid locations and update visit counts
         _, _, _, _, _, _, _, _, fov_grids_location = self._get_fov_grids_location()
@@ -242,7 +247,7 @@ class DummyGym(gym.Env):
         plt.show()
 
 # Example usage:
-env = DummyGym(map_size=(30,30), num_of_obstacles=140, fov=(5,5))
+env = DummyGym(map_size=(40,21), car_size=(7,7), step_size=5, num_of_obstacles=10, fov=(10,10))
 env.render('Map')
 env.render('fov_map')
 env.render('visit_count')

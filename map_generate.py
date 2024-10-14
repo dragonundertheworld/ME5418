@@ -1,6 +1,7 @@
 from scipy.ndimage import label  # Use to check connectivity
 import numpy as np
 import random
+import matplotlib.pyplot as plt
 
 def create_random_shape_map(map_size, target_area, num_of_obstacles):
     '''Create a random map with a specified area and number of obstacles'''

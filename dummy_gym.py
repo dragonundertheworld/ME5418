@@ -23,38 +23,76 @@ import MapBuilder
 '''
 
 # Map grid values
-OBSTACLE = 1
+OBSTACLE   = 1
 UNEXPLORED = 0
-CAR = 2
+CAR        = 2
 
 # Initial values
-INIT_POS = (12, 10)
-CAR_SIZE = (7, 7)
-STEP_SIZE = 5
-MAP_SIZE = (40, 21)
+INIT_POS         = (12, 10)
+CAR_SIZE         = (7, 7)
+STEP_SIZE        = 5
+MAP_SIZE         = (40, 21)
 NUM_OF_OBSTACLES = 10
-FOV = (10, 10)
+FOV              = (10, 10)
 
 # Rewards and penalties
-COLLISION_PENALTY = -1
-EXPLORATION_REWARD = 0.01
-REVISIT_PENALTY = -0.01
-MOVEMENT_PENALTY = -0.1
-STATIONARY_PENALTY = -0.5
-FINISH_REWARD = 5
+COLLISION_PENALTY    = -1
+EXPLORATION_REWARD   = 0.01
+REVISIT_PENALTY      = -0.01
+MOVEMENT_PENALTY     = -0.1
+STATIONARY_PENALTY   = -0.5
+FINISH_REWARD        = 5
 
 class DummyGym(gym.Env):
+    """
+    DummyGym is a custom OpenAI Gym environment for simulating a car navigating a grid map with obstacles.
+    Attributes:
+        car_size (tuple): Size of the car in the grid.
+        step_size (int): Number of steps the car moves in one action.
+        map_size (tuple): Size of the grid map.
+        num_of_obstacles (int): Number of obstacles in the map.
+        init_pos (tuple): Initial position of the car.
+        fov (tuple): Field of view size.
+        see_through (bool): Whether obstacles are see-through.
+        is_slippery (bool): Whether the environment is slippery.
+        car_pos (tuple): Current position of the car.
+        map (ndarray): The grid map.
+        fov_map (ndarray): The field of view map.
+        visit_count (ndarray): Visit counts for each grid cell.
+        action_space (gym.spaces.Discrete): Action space (4 discrete actions: Up, Down, Left, Right).
+        observation_space (gym.spaces.Box): Observation space (2D map and visit counts).
+        state (tuple): Current state of the environment.
+    Methods:
+        __init__(self, init_pos, car_size, step_size, map_size, num_of_obstacles, fov, see_through, map_file_path, is_slippery):
+            Initializes the DummyGym environment.
+        _create_map(self, map_file_path):
+            Creates the grid map.
+        _place_car(self):
+            Randomly places the car in the map without overlapping obstacles.
+        _get_fov_grids_location(self):
+            Gets the grid locations within the field of view.
+        _observe(self):
+            Observes the current state of the environment.
+        step(self, action):
+            Executes a step in the environment based on the given action.
+        calculate_reward_and_done(self):
+            Calculates the reward and checks if the episode is done.
+        reset(self):
+            Resets the environment to the initial state.
+        render(self, map_type):
+            Renders the environment.
+    """
     def __init__(self, init_pos=(2, 3), car_size=(1,1), step_size=1, map_size=(10, 10), num_of_obstacles=5, fov=(5, 5), see_through=False, map_file_path=None, is_slippery=False):
         super(DummyGym, self).__init__()
-        self.car_size = car_size
-        self.step_size = step_size
-        self.map_size = map_size
+        self.car_size         = car_size
+        self.step_size        = step_size
+        self.map_size         = map_size
         self.num_of_obstacles = num_of_obstacles
-        self.init_pos = init_pos if init_pos else self._place_car()
-        self.fov = fov
-        self.see_through = see_through
-        self.is_slippery = is_slippery
-        self.car_pos = self.init_pos
+        self.init_pos         = init_pos if init_pos else self._place_car()
+        self.fov              = fov
+        self.see_through      = see_through
+        self.is_slippery      = is_slippery
+        self.car_pos          = self.init_pos
         
         # Create the map
         self.map = self._create_map(map_file_path)
@@ -96,19 +134,19 @@ class DummyGym(gym.Env):
         x = self.car_pos[0]
         y = self.car_pos[1]
 
-        up_bound_of_fov_in_map = x - self.fov[0] // 2
-        down_bound_of_fov_in_map = x + self.fov[0] // 2
-        left_bound_of_fov_in_map = y - self.fov[1] // 2
+        up_bound_of_fov_in_map    = x - self.fov[0] // 2
+        down_bound_of_fov_in_map  = x + self.fov[0] // 2
+        left_bound_of_fov_in_map  = y - self.fov[1] // 2
         right_bound_of_fov_in_map = y + self.fov[1] // 2
 
-        up_bound_of_map = 0
-        down_bound_of_map = self.map_size[0]
-        left_bound_of_map = 0
-        right_bound_of_map = self.map_size[1]
+        up_bound_of_map           = 0
+        down_bound_of_map         = self.map_size[0]
+        left_bound_of_map         = 0
+        right_bound_of_map        = self.map_size[1]
 
-        up_bound_of_fov_in_fov = 0
-        down_bound_of_fov_in_fov = self.fov[0]
-        left_bound_of_fov_in_fov = 0
+        up_bound_of_fov_in_fov    = 0
+        down_bound_of_fov_in_fov  = self.fov[0]
+        left_bound_of_fov_in_fov  = 0
         right_bound_of_fov_in_fov = self.fov[1]
 
         fov_grids_location = []
@@ -247,7 +285,7 @@ class DummyGym(gym.Env):
         plt.show()
 
 # Example usage:
-env = DummyGym(map_size=(40,21), car_size=(7,7), step_size=5, num_of_obstacles=10, fov=(10,10))
+env = DummyGym(map_size=(40,21), car_size=(7,7), step_size=5, num_of_obstacles=10, fov=(10,10)) 
 env.render('Map')
 env.render('fov_map')
 env.render('visit_count')

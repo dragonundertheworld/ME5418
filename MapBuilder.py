@@ -57,3 +57,4 @@ def save_and_show_map(expanded_map, map_type):
     plt.show()
 # 调用MapBuilder并生成扩展后的迷宫
 # matrix = MapBuilder(30, 30, 0.35, 2)
+# save_and_show_map(matrix, 'random_map')

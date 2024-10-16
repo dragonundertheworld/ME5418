@@ -22,8 +22,8 @@ import MapBuilder
 import math
 
 # Map grid values
-OBSTACLE   = 1
-UNEXPLORED = 0
+OBSTACLE   = 0
+UNEXPLORED = 1
 CAR        = 2
 
 # Initial values
@@ -182,13 +182,13 @@ class DummyGym(gym.Env):
             return MapBuilder.MapBuilder(self.map_size[0], self.map_size[1], occupancy, self.car.size[0])
 
     def _place_car(self):
-        if np.any(self.map[self.car.up_bound:self.car.down_bound, self.car.left_bound:self.car.right_bound]): # np.any() returns True if any element is non-zero
+        if np.any(self.map[self.car.up_bound:self.car.down_bound, self.car.left_bound:self.car.right_bound]==OBSTACLE): # np.any() returns True if any element is non-zero
             # Randomly place the car in the map without car_size overlapping with obstacles
             while True:
                 self.car.pos = (np.random.randint(math.ceil(self.car.size[0]/2), math.ceil(self.map_size[0]-self.car.size[0]/2)), 
                                 np.random.randint(math.ceil(self.car.size[1]/2), math.ceil(self.map_size[1]-self.car.size[1]/2)))
-                print(self.car.down_bound, self.car.right_bound)
-                if not np.any(self.map[self.car.up_bound:self.car.down_bound, self.car.left_bound:self.car.right_bound]):
+                # print(self.car.down_bound, self.car.right_bound)
+                if not np.any(self.map[self.car.up_bound:self.car.down_bound, self.car.left_bound:self.car.right_bound]==OBSTACLE):
                     break
 
     # Get fov grid locations
@@ -271,7 +271,7 @@ class DummyGym(gym.Env):
         self.car.pos = new_pos
 
         # Abnormal flags
-        if self.map[self.car.up_bound:self.car.down_bound, self.car.left_bound:self.car.right_bound].any(): # if any element is non-zero, then there is a collision
+        if np.any(self.map[self.car.up_bound:self.car.down_bound, self.car.left_bound:self.car.right_bound]==OBSTACLE):
             self.COLLISION_FLAG = True
             self.car.pos = old_pos
             print("Collision! Car stays in the same position: ", new_pos)
@@ -349,7 +349,15 @@ env.render('visit_count')
 print(env.action_space.n)
 
 # Perform a step
-env.step(0)
+env.step(1) # Move down
+
+# Render the maps after the step
+env.render('Map')
+env.render('fov_map')
+env.render('visit_count')
+
+# Perform another step
+env.step(2)
 
 # Render the maps after the step
 env.render('Map')

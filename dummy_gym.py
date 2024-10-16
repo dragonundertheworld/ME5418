@@ -19,6 +19,7 @@ import os
 import gym
 from gym import spaces
 import MapBuilder
+import math
 
 # Map grid values
 OBSTACLE   = 1
@@ -159,7 +160,7 @@ class DummyGym(gym.Env):
         self.fov_map = np.zeros(self.car.fov)
         
         # Initialize visit counts for each grid
-        self.visit_count = np.zeros(self.map_size)
+        self.visit_count = np.zeros(self.map.shape)
         
         # Action space: 4 discrete actions (Up, Down, Left, Right)
         self.action_space = spaces.Discrete(4)  # 0: Up, 1: Down, 2: Left, 3: Right
@@ -184,7 +185,8 @@ class DummyGym(gym.Env):
         if np.any(self.map[self.car.up_bound:self.car.down_bound, self.car.left_bound:self.car.right_bound]): # np.any() returns True if any element is non-zero
             # Randomly place the car in the map without car_size overlapping with obstacles
             while True:
-                self.car.pos = (np.random.randint(0, self.map_size[0]), np.random.randint(0, self.map_size[1]))
+                self.car.pos = (np.random.randint(math.ceil(self.car.size[0]/2), math.ceil(self.map_size[0]-self.car.size[0]/2)), 
+                                np.random.randint(math.ceil(self.car.size[1]/2), math.ceil(self.map_size[1]-self.car.size[1]/2)))
                 print(self.car.down_bound, self.car.right_bound)
                 if not np.any(self.map[self.car.up_bound:self.car.down_bound, self.car.left_bound:self.car.right_bound]):
                     break
@@ -269,7 +271,7 @@ class DummyGym(gym.Env):
         self.car.pos = new_pos
 
         # Abnormal flags
-        if self.map[self.car.pos] == OBSTACLE:  # Obstacle collision
+        if self.map[self.car.up_bound:self.car.down_bound, self.car.left_bound:self.car.right_bound].any(): # if any element is non-zero, then there is a collision
             self.COLLISION_FLAG = True
             self.car.pos = old_pos
             print("Collision! Car stays in the same position: ", new_pos)
@@ -328,11 +330,11 @@ class DummyGym(gym.Env):
         display_map = np.copy(display_map)
         if map_type == "visit_count" or map_type == "Map":
             display_map[self.car.up_bound:self.car.down_bound, 
-                        self.car.left_bound:self.car.right_bound] = CAR_MATRIX  # Update car position in map
+                        self.car.left_bound:self.car.right_bound] = CAR  # Update car position in map
             # MapBuilder.save_and_show_map(display_map, map_type)
         else:
             display_map[self.car.up_bound_under_fov:self.car.down_bound_under_fov, 
-                        self.car.left_bound_under_fov:self.car.right_bound_under_fov] = CAR_MATRIX  # Update car position in FOV map
+                        self.car.left_bound_under_fov:self.car.right_bound_under_fov] = CAR  # Update car position in FOV map
         plt.title(map_type)
         plt.imshow(display_map, cmap='gray', interpolation='none')
         plt.colorbar()

@@ -18,7 +18,6 @@ import matplotlib.pyplot as plt
 import os
 import gym
 from gym import spaces
-from map_generate import create_random_shape_map
 import MapBuilder
 
 # Map grid values
@@ -28,10 +27,11 @@ CAR        = 2
 
 # Initial values
 INIT_POS         = (12, 10)
-CAR_SIZE         = (7, 7)
+CAR_SIZE         = (2, 2)
+CAR_MATRIX       = np.full(CAR_SIZE, CAR) # car matrix is a 10x10 matrix with 2s
 STEP_SIZE        = 5
 MAP_SIZE         = (40, 21)
-NUM_OF_OBSTACLES = 10
+NUM_OF_OBSTACLES = 240
 FOV              = (10, 10)
 
 # Rewards and penalties
@@ -156,7 +156,7 @@ class DummyGym(gym.Env):
         self._place_car()
 
         # Initialize fov_map
-        self.fov_map = np.zeros(self.fov)
+        self.fov_map = np.zeros(self.car.fov)
         
         # Initialize visit counts for each grid
         self.visit_count = np.zeros(self.map_size)
@@ -177,15 +177,16 @@ class DummyGym(gym.Env):
             map = np.loadtxt(map_file_path)
             return map
         else:
-            return MapBuilder.MapBuilder(self.map_size[0], self.map_size[1])
+            occupancy = self.num_of_obstacles / (self.map_size[0] * self.map_size[1])
+            return MapBuilder.MapBuilder(self.map_size[0], self.map_size[1], occupancy, self.car.size[0])
 
     def _place_car(self):
         if np.any(self.map[self.car.up_bound:self.car.down_bound, self.car.left_bound:self.car.right_bound]): # np.any() returns True if any element is non-zero
             # Randomly place the car in the map without car_size overlapping with obstacles
             while True:
-                car_pos = (np.random.randint(0, self.map_size[0]), np.random.randint(0, self.map_size[1]))
-                if np.all(self.map[self.car.up_bound:self.car.down_bound, self.car.left_bound:self.car.right_bound] == 0):
-                    self.car.pos = car_pos
+                self.car.pos = (np.random.randint(0, self.map_size[0]), np.random.randint(0, self.map_size[1]))
+                print(self.car.down_bound, self.car.right_bound)
+                if not np.any(self.map[self.car.up_bound:self.car.down_bound, self.car.left_bound:self.car.right_bound]):
                     break
 
     # Get fov grid locations
@@ -240,8 +241,10 @@ class DummyGym(gym.Env):
         fov_x_min_in_map, fov_x_max_in_map, fov_y_min_in_map, fov_y_max_in_map, fov_x_min_in_fov, fov_x_max_in_fov, fov_y_min_in_fov, fov_y_max_in_fov, _ = self._get_fov_grids_location()
         fov_map = np.full((self.car.fov[0], self.car.fov[1]), OBSTACLE)  # Initialize FOV map with obstacles
 
-        # Update FOV map with the actual map
-        fov_map[fov_x_min_in_fov:fov_x_max_in_fov, fov_y_min_in_fov:fov_y_max_in_fov] = self.map[fov_x_min_in_map:fov_x_max_in_map, fov_y_min_in_map:fov_y_max_in_map]
+        # Reflect the map in the FOV map
+        fov_map[fov_x_min_in_fov:fov_x_max_in_fov,
+                 fov_y_min_in_fov:fov_y_max_in_fov] = self.map[fov_x_min_in_map:fov_x_max_in_map, 
+                                                               fov_y_min_in_map:fov_y_max_in_map]
         self.fov_map = fov_map
         return self.visit_count, self.fov_map, self.car.pos
 
@@ -281,7 +284,7 @@ class DummyGym(gym.Env):
                     print(f"Car moves {self.step_size} from {old_pos} to {new_pos}")
             else:
                 self.SLIPPERY_FLAG = False
-                print(f"Car moves {self.step_size} from {old_pos} to {new_pos}")
+                print(f"Car moves {self.car.step_size} from {old_pos} to {new_pos}")
 
         reward, done = self.calculate_reward_and_done()
 
@@ -321,15 +324,17 @@ class DummyGym(gym.Env):
 
     # Render the environment
     def render(self, map_type):
-        display_map = {"visit_count": self.visit_count, "fov_map": self.fov_map, "map": self.map}[map_type]
+        display_map = {"visit_count": self.visit_count, "fov_map": self.fov_map, "Map": self.map}[map_type]
         display_map = np.copy(display_map)
-        if map_type == "visit_count" or map_type == "map":
+        if map_type == "visit_count" or map_type == "Map":
             display_map[self.car.up_bound:self.car.down_bound, 
-                        self.car.left_bound:self.car.right_bound] = CAR
+                        self.car.left_bound:self.car.right_bound] = CAR_MATRIX  # Update car position in map
+            # MapBuilder.save_and_show_map(display_map, map_type)
         else:
             display_map[self.car.up_bound_under_fov:self.car.down_bound_under_fov, 
-                        self.car.left_bound_under_fov:self.car.right_bound_under_fov] = CAR  # Update car position in FOV map
+                        self.car.left_bound_under_fov:self.car.right_bound_under_fov] = CAR_MATRIX  # Update car position in FOV map
         plt.title(map_type)
+        plt.imshow(display_map, cmap='gray', interpolation='none')
         plt.colorbar()
         plt.show()
         

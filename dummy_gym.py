@@ -260,12 +260,16 @@ class DummyGym(gym.Env):
 
         # Map actions to movement
         if action == 0:  # Up
+            movement = "Up"
             new_pos = (max(self.car.pos[0]-self.car.step_size, 0), self.car.pos[1])
         elif action == 1:  # Down
+            movement = "Down"
             new_pos = (min(self.car.pos[0]+self.car.step_size, self.map_size[0]-1), self.car.pos[1])
         elif action == 2:  # Left
+            movement = "Left"
             new_pos = (self.car.pos[0], max(self.car.pos[1]-self.car.step_size, 0))
         elif action == 3:  # Right
+            movement = "Right"
             new_pos = (self.car.pos[0], min(self.car.pos[1]+self.car.step_size, self.map_size[1]-1))
         else:
             raise ValueError(f"Invalid action: {action}")
@@ -273,10 +277,15 @@ class DummyGym(gym.Env):
         self.car.pos = new_pos
 
         # Abnormal flags
-        if np.any(self.map[self.car.up_bound:self.car.down_bound, self.car.left_bound:self.car.right_bound]==OBSTACLE):
+        if (np.any(self.map[self.car.up_bound:self.car.down_bound, 
+                            self.car.left_bound:self.car.right_bound] == OBSTACLE) or
+            self.car.up_bound < 0 or
+            self.car.down_bound > self.map_size[0] or
+            self.car.left_bound < 0 or
+            self.car.right_bound > self.map_size[1]):
             self.COLLISION_FLAG = True
             self.car.pos = old_pos
-            print("Collision! Car stays in the same position: ", new_pos)
+            print("Collision! Car stays in the same position: ", self.car.pos)
         else:
             if self.is_slippery:
                 if np.random.rand() < 0.2: # Slip
@@ -288,7 +297,7 @@ class DummyGym(gym.Env):
                     print(f"Car moves {self.step_size} from {old_pos} to {new_pos}")
             else:
                 self.SLIPPERY_FLAG = False
-                print(f"Car moves {self.car.step_size} from {old_pos} to {new_pos}")
+                print(f"Car moves {movement} {self.car.step_size} units from {old_pos} to {new_pos}")
 
         reward, done = self.calculate_reward_and_done()
 

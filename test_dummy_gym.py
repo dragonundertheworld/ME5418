@@ -1,14 +1,15 @@
 import unittest
 import numpy as np
 from unittest.mock import patch, MagicMock
-from dummy_gym import DummyGym  # Ensure DummyGym is imported from the correct module
-from dummy_gym import FINISH_REWARD, COLLISION_PENALTY, EXPLORATION_REWARD, REVISIT_PENALTY, MOVEMENT_PENALTY, STATIONARY_PENALTY
-from dummy_gym import OBSTACLE
+from ME5418.dummy_gym import DummyGym  # Ensure DummyGym is imported from the correct module
+from ME5418.dummy_gym import FINISH_REWARD, COLLISION_PENALTY, EXPLORATION_REWARD, REVISIT_PENALTY, MOVEMENT_PENALTY, STATIONARY_PENALTY
+from ME5418.dummy_gym import OBSTACLE
 
 class TestDummyGym(unittest.TestCase):
     def setUp(self):
         # Common initialization for each test
-        self.env = DummyGym(init_pos=(2, 3), car_size=(1, 1), step_size=1, map_size=(10, 10), num_of_obstacles=5, fov=(5, 5))
+        self.env = DummyGym(init_pos=(2, 3), car_size=(1, 1), 
+                            step_size=1, map_size=(10, 10), num_of_obstacles=5, fov=(5, 5))
         self.env.map = np.zeros((10, 10))  # No obstacles for simplicity in most tests
 
     def test_create_map_with_invalid_path(self):
@@ -122,5 +123,16 @@ class TestDummyGym(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.env.step(5)  # Invalid action
 
-if __name__ == "__main__":
-    unittest.main()
+# if __name__ == "__main__":
+#     unittest.main()
+
+
+def load_data(filename):
+    with open(filename, 'r') as file:
+        data = []
+        for line in file:
+            row = [int(x) for x in line.strip().split()]
+            data.append(row)
+    #print(data)
+    return data
+

@@ -18,8 +18,9 @@ import matplotlib.pyplot as plt
 import os
 import gym
 from gym import spaces
-import MapBuilder
+from .MapBuilder import MapBuilder
 import math
+import unittest
 
 # Map grid values
 OBSTACLE   = 0
@@ -142,7 +143,8 @@ class DummyGym(gym.Env):
             Renders the environment based on the given map type.
     """
     
-    def __init__(self, car=Car(), map_size=MAP_SIZE, num_of_obstacles=NUM_OF_OBSTACLES, see_through=False, map_file_path=None, is_slippery=False):
+    def __init__(self, car=Car(), map_size=MAP_SIZE, 
+                num_of_obstacles=NUM_OF_OBSTACLES, see_through=False, map_file_path=None, is_slippery=False):
         super(DummyGym, self).__init__()
         self.car              = car
         self.map_size         = map_size
@@ -179,7 +181,7 @@ class DummyGym(gym.Env):
             return map
         else:
             occupancy = self.num_of_obstacles / (self.map_size[0] * self.map_size[1])
-            return MapBuilder.MapBuilder(self.map_size[0], self.map_size[1], occupancy, self.car.size[0])
+            return MapBuilder(self.map_size[0], self.map_size[1], occupancy, self.car.size[0])
 
     def _place_car(self):
         if np.any(self.map[self.car.up_bound:self.car.down_bound, self.car.left_bound:self.car.right_bound]==OBSTACLE): # np.any() returns True if any element is non-zero
@@ -291,7 +293,7 @@ class DummyGym(gym.Env):
         reward, done = self.calculate_reward_and_done()
 
         # Update state
-        self.state = self._observe()
+        # self.state = self._observe()
         return self.state, reward, done, {}
 
     def calculate_reward_and_done(self):
@@ -341,6 +343,24 @@ class DummyGym(gym.Env):
         plt.show()
         
 
+class MAPFTests(unittest.TestCase):
+    def test_move_up(self):
+        gameEnv1 = DummyGym()
+
+
+
+def load_data(filename):
+    with open(filename, 'r') as file:
+        data = []
+        for line in file:
+            row = [int(x) for x in line.strip().split()]
+            data.append(row)
+    #print(data)
+    return data
+
+data = load_data('ME5418/test_map/map_2024-10-17_19-06-07.txt')
+
+'''
 # Example usage:
 env = DummyGym() 
 env.render('Map')
@@ -371,3 +391,4 @@ env.step(1)
 env.render('Map')
 env.render('fov_map')
 env.render('visit_count')
+'''

@@ -7,10 +7,9 @@
         - Up, Down, Left, Right
     Reward:
         - Penalty for colliding with obstacles (-1)
-        - Reward for exploring a new area (0.01)
+        - Reward for exploring a new area (0.01 * visit count)
         - Penalty for revisiting a previously explored area (-0.01 * visit count)
         - Movement Penalty (-0.1)
-        - Stationary Penalty (-0.5)
         - Big reward for completing exploration (5)
 '''
 import numpy as np
@@ -332,7 +331,7 @@ class DummyGym(gym.Env):
             if self.visit_count[grid_location] == UNEXPLORED:  # New grid
                 reward += EXPLORATION_REWARD
             else:
-                reward += REVISIT_PENALTY * self.visit_count[grid_location]  # Penalty for revisiting
+                reward += REVISIT_PENALTY  # Penalty for revisiting
             self.visit_count[grid_location] += 1
 
         # Check if map is fully explored

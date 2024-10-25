@@ -25,6 +25,7 @@ import unittest
 OBSTACLE   = 0
 UNEXPLORED = 1
 CAR        = 2
+UNKNOWN    = -1
 
 # Initial values
 INIT_POS         = (12, 10)
@@ -33,7 +34,9 @@ CAR_MATRIX       = np.full(CAR_SIZE, CAR) # car matrix is a 10x10 matrix with 2s
 STEP_SIZE        = 5
 MAP_SIZE         = (40, 21)
 NUM_OF_OBSTACLES = 240
+NUM_OF_RAYS      = 20
 FOV              = (10, 10)
+FIGURE_SIZE      = (12, 8)
 
 # Rewards and penalties
 COLLISION_PENALTY    = -1
@@ -77,7 +80,7 @@ class Car:
         self.fov = FOV
         self._pos = INIT_POS  # use an underscore to indicate internal storage
         self._update_bounds()
-        self.up_bound_under_fov = self.fov[0]//2-self.size[0]//2
+        self.up_bound_under_fov = self.fov[0]//2-self.size[0]//2 # car's upper bound under fov(10*10 ) coordinate
         self.down_bound_under_fov = self.fov[0]//2+self.size[0]//2
         self.left_bound_under_fov = self.fov[1]//2-self.size[1]//2
         self.right_bound_under_fov = self.fov[1]//2+self.size[1]//2
@@ -102,10 +105,10 @@ class Car:
         self.right_bound = self._pos[1] + math.ceil(self.size[1] / 2)
 
         # Update FOV bounds
-        self.up_bound_fov = self._pos[0] - self.fov[0] // 2
-        self.down_bound_fov = self._pos[0] + self.fov[0] // 2
-        self.left_bound_fov = self._pos[1] - self.fov[1] // 2
-        self.right_bound_fov = self._pos[1] + self.fov[1] // 2
+        self.up_bound_fov = self._pos[0] - math.ceil(self.fov[0] // 2) # 存疑
+        self.down_bound_fov = self._pos[0] + math.ceil(self.fov[0] // 2)
+        self.left_bound_fov = self._pos[1] - math.ceil(self.fov[1] // 2)
+        self.right_bound_fov = self._pos[1] + math.ceil(self.fov[1] // 2)
 
 
 class DummyGym(gym.Env):
@@ -161,6 +164,7 @@ class DummyGym(gym.Env):
 
         # Initialize fov_map
         self.fov_map = np.zeros(self.car.fov)
+        self.detect_map = np.zeros(self.car.fov)
         
         # Initialize visit counts for each grid
         self.visit_count = np.zeros(self.map.shape)
@@ -197,6 +201,23 @@ class DummyGym(gym.Env):
 
     # Get fov grid locations
     def _get_fov_grids_location(self):
+        """
+        Calculate the field of view (FOV) grid locations for the car within the map boundaries.
+        This method determines the grid locations that fall within the car's field of view (FOV) 
+        while considering the boundaries of the map. It ensures that the FOV does not exceed the 
+        map limits and adjusts the FOV grid locations accordingly.
+        Returns:
+            tuple: A tuple containing the following elements:
+            - fov_x_min_in_map (int): Minimum x-coordinate of the FOV in the map.
+            - fov_x_max_in_map (int): Maximum x-coordinate of the FOV in the map.
+            - fov_y_min_in_map (int): Minimum y-coordinate of the FOV in the map.
+            - fov_y_max_in_map (int): Maximum y-coordinate of the FOV in the map.
+            - fov_x_min_in_fov (int): Minimum x-coordinate of the FOV in the FOV grid.
+            - fov_x_max_in_fov (int): Maximum x-coordinate of the FOV in the FOV grid.
+            - fov_y_min_in_fov (int): Minimum y-coordinate of the FOV in the FOV grid.
+            - fov_y_max_in_fov (int): Maximum y-coordinate of the FOV in the FOV grid.
+            - fov_grids_location (list): List of tuples representing the grid locations within the FOV.
+        """
         up_bound_of_map           = 0
         down_bound_of_map         = self.map_size[0]
         left_bound_of_map         = 0
@@ -251,8 +272,67 @@ class DummyGym(gym.Env):
                  fov_y_min_in_fov:fov_y_max_in_fov] = self.map[fov_x_min_in_map:fov_x_max_in_map, 
                                                                fov_y_min_in_map:fov_y_max_in_map]
         self.fov_map = fov_map
+        self.detect_environment(self.fov_map, num_rays=NUM_OF_RAYS)
+        print(self.detect_map)
         return self.visit_count, self.fov_map, self.car.pos
 
+    def detect_environment(self, environment, num_rays=NUM_OF_RAYS):
+        """
+        Simulates a LIDAR scan with adjustable precision.
+        
+        :param environment: 2D numpy array representing the environment (1: free space, 0: obstacle, 2: LIDAR).
+        :param num_rays: Number of rays to cast (higher number means higher resolution, e.g. 360 for 1-degree precision).
+        :return: 2D numpy array with detected areas marked as 1, obstacles as 0, and unknown areas as -1.
+        """
+        def is_valid(r, c, rows, cols):
+            """Check if a cell is within the bounds of the matrix."""
+            return 0 <= r < rows and 0 <= c < cols
+        
+        # Get the dimensions of the environment
+        rows, cols = self.fov_map.shape
+        
+        # Initialize the detected environment with unknown areas (-1)
+        self.detect_map = np.full((rows, cols), UNKNOWN)
+        
+        # Find the position of the LIDAR (2)
+        car_row, car_col = self.fov_map.shape[0]//2, self.fov_map.shape[1]//2      
+        
+        # Cast rays in 360 degrees (or a user-defined number of directions)
+        for i in range(num_rays):
+            # Convert the ray index to an angle in radians
+            angle = (i / num_rays) * 2 * math.pi
+            
+            # Calculate the direction vector for this angle
+            dir_r = math.sin(angle)  # Change in row (y-direction)
+            dir_c = math.cos(angle)  # Change in column (x-direction)
+            
+            # Initialize the starting point (LIDAR position)
+            r, c = float(car_row), float(car_col)
+            
+            # Trace the ray step by step
+            while True:
+                print(f"Ray {i} is at ({r}, {c})")
+                # Move along the ray direction
+                r += dir_r
+                c += dir_c
+                
+                # Convert floating point positions to integer grid positions
+                int_r, int_c = int(round(r)), int(round(c))
+                
+                # Stop if the ray goes out of bounds
+                if not is_valid(int_r, int_c, rows, cols):
+                    print(f"{int_c} and {int_r} are out of bounds ({rows}, {cols})")
+                    break
+                
+                # Stop if the ray hits an obstacle
+                if environment[int_r, int_c] == OBSTACLE:
+                    self.detect_map[int_r, int_c] = OBSTACLE
+                    print(f"Ray {i} hit an obstacle at ({int_r}, {int_c})")
+                    break
+                
+                # Mark the cell as visible in the detected environment
+                self.detect_map[int_r, int_c] = UNEXPLORED
+        
     # Step function for interacting with the environment
     def step(self, action):
         old_pos = self.car.pos
@@ -351,9 +431,9 @@ class DummyGym(gym.Env):
     # Render the environment
     def render(self, map_type=None):
         if map_type == None: # Render all maps at once
-            plt.figure(figsize=(20, 5))
+            plt.figure(figsize=FIGURE_SIZE)
             plt.suptitle("Dummy Gym Environment", fontsize=16)
-            plt.subplot(1, 3, 1)
+            plt.subplot(2, 2, 1)
             map1 = np.copy(self.map)
             map1[self.car.up_bound:self.car.down_bound, 
                         self.car.left_bound:self.car.right_bound] = CAR
@@ -361,7 +441,7 @@ class DummyGym(gym.Env):
             plt.imshow(map1, cmap='gray', interpolation='none')
             plt.colorbar()
 
-            plt.subplot(1, 3, 2)
+            plt.subplot(2, 2, 2)
             map2 = np.copy(self.fov_map)
             map2[self.car.up_bound_under_fov:self.car.down_bound_under_fov, 
                         self.car.left_bound_under_fov:self.car.right_bound_under_fov] = CAR
@@ -369,23 +449,31 @@ class DummyGym(gym.Env):
             plt.imshow(map2, cmap='gray', interpolation='none')
             plt.colorbar()
 
-            plt.subplot(1, 3, 3)
-            map3 = np.copy(self.visit_count)
-            map3[self.car.up_bound:self.car.down_bound, 
+            plt.subplot(2, 2, 3)
+            map3 = np.copy(self.detect_map)
+            map3[self.car.up_bound_under_fov:self.car.down_bound_under_fov,
+                        self.car.left_bound_under_fov:self.car.right_bound_under_fov] = CAR
+            plt.title("Detect Map")
+            plt.imshow(map3, cmap='gray', interpolation='none')
+            plt.colorbar()
+
+            plt.subplot(2, 2, 4)
+            map4 = np.copy(self.visit_count)
+            map4[self.car.up_bound:self.car.down_bound, 
                         self.car.left_bound:self.car.right_bound] = CAR
             plt.title("Visit Count")
-            plt.imshow(map3, cmap='gray', interpolation='none')
+            plt.imshow(map4, cmap='gray', interpolation='none')
             plt.colorbar()
 
             plt.show()
         else: # Render a specific map
-            display_map = {"visit_count": self.visit_count, "fov_map": self.fov_map, "Map": self.map}[map_type]
+            display_map = {"visit_count": self.visit_count, "fov_map": self.fov_map, "Map": self.map, "detect_map": self.detect_map}[map_type]
             display_map = np.copy(display_map)
             if map_type == "visit_count" or map_type == "Map":
                 display_map[self.car.up_bound:self.car.down_bound, 
                             self.car.left_bound:self.car.right_bound] = CAR  # Update car position in map
                 # MapBuilder.save_and_show_map(display_map, map_type)
-            elif map_type == "fov_map":
+            elif map_type == "fov_map" or map_type == "detect_map":
                 display_map[self.car.up_bound_under_fov:self.car.down_bound_under_fov, 
                             self.car.left_bound_under_fov:self.car.right_bound_under_fov] = CAR  # Update car position in FOV map
 
@@ -396,22 +484,22 @@ class DummyGym(gym.Env):
         
 
 # Uncomment the following code to perform an example usage:
-# env = DummyGym() 
-# env.render() # render all maps at once
-# print(env.action_space.n)
+env = DummyGym() 
+env.render() # render all maps at once
+print(env.action_space.n)
 
-# # Perform a step
-# env.step(1) # Move down
+# Perform a step
+env.step(1) # Move down
 
-# # Render the maps after the step
-# env.render()
+# Render the maps after the step
+env.render()
 
-# # Perform another step and render
-# env.step(2) # Move left
-# env.render()
+# Perform another step and render
+env.step(2) # Move left
+env.render()
 
-# env.step(0) # Move up
-# env.render()
+env.step(0) # Move up
+env.render()
 
-# env.step(3) # Move right
-# env.render()
+env.step(3) # Move right
+env.render()

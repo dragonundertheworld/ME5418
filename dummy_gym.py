@@ -28,14 +28,14 @@ CAR        = 2
 UNKNOWN    = -1
 
 # Initial values
-INIT_POS         = (12, 10)
-CAR_SIZE         = (2, 2)
+INIT_POS         = (7, 14)
+CAR_SIZE         = (1, 1)
 CAR_MATRIX       = np.full(CAR_SIZE, CAR) # car matrix is a 10x10 matrix with 2s
-STEP_SIZE        = 5
-MAP_SIZE         = (40, 21)
-NUM_OF_OBSTACLES = 240
-NUM_OF_RAYS      = 20
-FOV              = (10, 10)
+STEP_SIZE        = 1
+MAP_SIZE         = (10, 10)
+NUM_OF_OBSTACLES = 10
+NUM_OF_RAYS      = 50
+FOV              = (3, 3)
 FIGURE_SIZE      = (12, 8)
 
 # Rewards and penalties
@@ -45,7 +45,8 @@ REVISIT_PENALTY      = -0.01
 MOVEMENT_PENALTY     = -0.1
 FINISH_REWARD        = 5
 
-MAP_PATH = './test_map/map_2024-10-17_19-06-07.txt'
+# MAP_PATH = './test_map/map_2024-10-17_19-06-07.txt'
+MAP_PATH = './test_map/smaller_map.txt'
 
 class Car:
     """
@@ -99,16 +100,16 @@ class Car:
         Update bounds based on current position and size in the map
         '''
         # Update bounds based on current position and size
-        self.up_bound = self._pos[0] - math.ceil(self.size[0] / 2)
+        self.up_bound = self._pos[0] - math.floor(self.size[0] / 2)
         self.down_bound = self._pos[0] + math.ceil(self.size[0] / 2)
-        self.left_bound = self._pos[1] - math.ceil(self.size[1] / 2)
+        self.left_bound = self._pos[1] - math.floor(self.size[1] / 2)
         self.right_bound = self._pos[1] + math.ceil(self.size[1] / 2)
 
         # Update FOV bounds
-        self.up_bound_fov = self._pos[0] - math.ceil(self.fov[0] // 2) # 存疑
-        self.down_bound_fov = self._pos[0] + math.ceil(self.fov[0] // 2)
-        self.left_bound_fov = self._pos[1] - math.ceil(self.fov[1] // 2)
-        self.right_bound_fov = self._pos[1] + math.ceil(self.fov[1] // 2)
+        self.up_bound_fov = self._pos[0] - math.floor(self.fov[0] / 2) # 存疑
+        self.down_bound_fov = self._pos[0] + math.ceil(self.fov[0] / 2)
+        self.left_bound_fov = self._pos[1] - math.floor(self.fov[1] / 2)
+        self.right_bound_fov = self._pos[1] + math.ceil(self.fov[1] / 2)
 
 
 class DummyGym(gym.Env):
@@ -151,13 +152,14 @@ class DummyGym(gym.Env):
                 num_of_obstacles=NUM_OF_OBSTACLES, see_through=False, map_file_path=MAP_PATH, is_slippery=False):
         super(DummyGym, self).__init__()
         self.car              = car
-        self.map_size         = map_size
+        self.user_map_size    = map_size
         self.num_of_obstacles = num_of_obstacles
         self.see_through      = see_through
         self.is_slippery      = is_slippery
         
         # Create the map
         self.map = self._create_map(map_file_path)
+        self.map_size = self.map.shape
 
         # Place the car in the map
         self._place_car()
@@ -186,8 +188,8 @@ class DummyGym(gym.Env):
             self.map_size = map.shape
             return map
         else:
-            occupancy = self.num_of_obstacles / (self.map_size[0] * self.map_size[1])
-            return MapBuilder(self.map_size[0], self.map_size[1], occupancy, self.car.size[0])
+            occupancy = self.num_of_obstacles / (self.user_map_size[0] * self.user_map_size[1])
+            return MapBuilder(self.user_map_size[0], self.user_map_size[1], occupancy, self.car.size[0])
 
     def _place_car(self):
         if np.any(self.map[self.car.up_bound:self.car.down_bound, self.car.left_bound:self.car.right_bound]==OBSTACLE): # np.any() returns True if any element is non-zero
@@ -273,7 +275,7 @@ class DummyGym(gym.Env):
                                                                fov_y_min_in_map:fov_y_max_in_map]
         self.fov_map = fov_map
         self.detect_environment(self.fov_map, num_rays=NUM_OF_RAYS)
-        print(self.detect_map)
+        # print(self.detect_map)
         return self.visit_count, self.fov_map, self.car.pos
 
     def detect_environment(self, environment, num_rays=NUM_OF_RAYS):
@@ -311,7 +313,6 @@ class DummyGym(gym.Env):
             
             # Trace the ray step by step
             while True:
-                print(f"Ray {i} is at ({r}, {c})")
                 # Move along the ray direction
                 r += dir_r
                 c += dir_c
@@ -321,13 +322,11 @@ class DummyGym(gym.Env):
                 
                 # Stop if the ray goes out of bounds
                 if not is_valid(int_r, int_c, rows, cols):
-                    print(f"{int_c} and {int_r} are out of bounds ({rows}, {cols})")
                     break
                 
                 # Stop if the ray hits an obstacle
                 if environment[int_r, int_c] == OBSTACLE:
                     self.detect_map[int_r, int_c] = OBSTACLE
-                    print(f"Ray {i} hit an obstacle at ({int_r}, {int_c})")
                     break
                 
                 # Mark the cell as visible in the detected environment
@@ -378,19 +377,19 @@ class DummyGym(gym.Env):
             detect_right_bound > self.map_size[1]):
             self.COLLISION_FLAG = True
             self.car.pos = old_pos
-            print("Collision! Car stays in the same position: ", self.car.pos)
+            # print("Collision! Car stays in the same position: ", self.car.pos)
         else:
             if self.is_slippery:
                 if np.random.rand() < 0.2: # Slip
                     self.SLIPPERY_FLAG = True
                     self.car.pos = old_pos
-                    print("Slippery! Car stays in the same position: ", new_pos)
+                    # print("Slippery! Car stays in the same position: ", new_pos)
                 else:
                     self.SLIPPERY_FLAG = False
                     print(f"Car moves {self.step_size} from {old_pos} to {new_pos}")
             else:
                 self.SLIPPERY_FLAG = False
-                print(f"Car moves {movement} {self.car.step_size} units from {old_pos} to {new_pos}")
+                # print(f"Car moves {movement} {self.car.step_size} units from {old_pos} to {new_pos}")
 
         reward, done = self.calculate_reward_and_done()
 
@@ -453,7 +452,7 @@ class DummyGym(gym.Env):
             map3 = np.copy(self.detect_map)
             map3[self.car.up_bound_under_fov:self.car.down_bound_under_fov,
                         self.car.left_bound_under_fov:self.car.right_bound_under_fov] = CAR
-            plt.title("Detect Map")
+            plt.title("Laser detect Map")
             plt.imshow(map3, cmap='gray', interpolation='none')
             plt.colorbar()
 
@@ -489,7 +488,7 @@ env.render() # render all maps at once
 print(env.action_space.n)
 
 # Perform a step
-env.step(1) # Move down
+env.step(0) # Move up
 
 # Render the maps after the step
 env.render()
@@ -498,8 +497,8 @@ env.render()
 env.step(2) # Move left
 env.render()
 
-env.step(0) # Move up
+env.step(1) # Move right
 env.render()
 
-env.step(3) # Move right
+env.step(3)
 env.render()

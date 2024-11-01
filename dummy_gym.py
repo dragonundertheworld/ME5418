@@ -28,7 +28,7 @@ CAR        = 2
 UNKNOWN    = -1
 
 # Initial values
-INIT_POS         = (7, 14)
+INIT_POS         = (4, 4)
 CAR_SIZE         = (1, 1)
 CAR_MATRIX       = np.full(CAR_SIZE, CAR) # car matrix is a 10x10 matrix with 2s
 STEP_SIZE        = 1
@@ -46,7 +46,7 @@ MOVEMENT_PENALTY     = -0.1
 FINISH_REWARD        = 5
 
 # MAP_PATH = './test_map/map_2024-10-17_19-06-07.txt'
-MAP_PATH = './test_map/smaller_map.txt'
+MAP_PATH = './test_map/10x10_map.txt'
 
 class Car:
     """
@@ -387,7 +387,7 @@ class DummyGym(gym.Env):
             detect_right_bound > self.map_size[1]):
             self.COLLISION_FLAG = True
             self.car.pos = old_pos
-            # print("Collision! Car stays in the same position: ", self.car.pos)
+            print("Collision! Car stays in the same position: ", self.car.pos)
         else:
             if self.is_slippery:
                 if np.random.rand() < 0.2: # Slip
@@ -399,7 +399,7 @@ class DummyGym(gym.Env):
                     print(f"Car moves {self.step_size} from {old_pos} to {new_pos}")
             else:
                 self.SLIPPERY_FLAG = False
-                # print(f"Car moves {movement} {self.car.step_size} units from {old_pos} to {new_pos}")
+                print(f"Car moves {movement} {self.car.step_size} units from {old_pos} to {new_pos}")
 
         reward, done = self.calculate_reward_and_done()
 

@@ -277,6 +277,16 @@ class DummyGym(gym.Env):
         self.detect_environment(self.fov_map, num_rays=NUM_OF_RAYS)
         # print(self.detect_map)
         return self.visit_count, self.fov_map, self.car.pos
+    
+    def save_state(self, path):
+        np.savez(path, visit_count=self.visit_count, fov_map=self.fov_map, car_pos=self.car.pos)
+
+    def load_state(self, path):
+        data = np.load(path)
+        self.visit_count = data['visit_count']
+        self.fov_map = data['fov_map']
+        self.car.pos = tuple(data['car_pos'])
+        self.state = self.observe()
 
     def detect_environment(self, environment, num_rays=NUM_OF_RAYS):
         """
@@ -484,6 +494,7 @@ class DummyGym(gym.Env):
 
 # Uncomment the following code to perform an example usage:
 env = DummyGym() 
+# env.load_state('test.npz')
 env.render() # render all maps at once
 print(env.action_space.n)
 
@@ -495,6 +506,7 @@ env.render()
 
 # Perform another step and render
 env.step(2) # Move left
+# env.save_state('test.npz')
 env.render()
 
 env.step(1) # Move right

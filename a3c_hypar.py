@@ -1,4 +1,4 @@
-from a3c_model import ActorCriticNet, train 
+from a3c_model import ActorCriticNet
 import gym
 import torch
 import torch.optim as optim
@@ -13,6 +13,11 @@ env_name = "DummyGym-v0"
 original_state = env.observe()  # 状态空间
 action_size = env.action_space.n    # 动作空间  
 #print(f'action_size is {action_size}') # 4
+
+# worker 超参数
+gamma = 0.99
+max_episodes = 1000
+# num_workers = 1
 
 
 # 处理原始state

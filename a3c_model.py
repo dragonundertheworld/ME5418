@@ -102,14 +102,22 @@ class ActorCriticNet(nn.Module):
         critic_output = self.critic(merged)
         
         return actor_output, critic_output
+    
+    def select_action(self,probs, epsilon):
+        if np.random.rand() <= epsilon:
+            action = np.random.random_integers(0, 3)
+        else:
+            action = torch.multinomial(probs, 1).item()
+        return action
 
     def act(self, processed_states):
         logits, _ = self.forward(processed_states) # actor_output
-        probs = torch.softmax(logits, dim=-1)
-        action = torch.multinomial(probs, 1).item()
+        probs = torch.softmax(logits, dim=-1) # 计算动作概率分布
+        # action = torch.multinomial(probs, 1).item()
+        action = self.select_action(probs, 0.8) # 选择动作, epsilon=0.8, 80%概率选择最优动作
         print(f"action is {action}")
         return action
-
+    
     def evaluate(self, processed_states, action):
         logits, value = self.forward(processed_states)
         probs = torch.softmax(logits, dim=-1)

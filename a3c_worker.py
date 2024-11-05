@@ -35,7 +35,7 @@ class Worker(mp.Process):
             time += 1
             if time % 100 == 0:
                 print(f"Worker {self.name}, Episode: {self.global_episode.value}")
-                time.sleep(1)
+                # time.sleep(1)
             # 收集一个episode的数据
             trajectory = self.collect_trajectory()
             
@@ -71,18 +71,18 @@ class Worker(mp.Process):
             
             # 执行动作 next_state是observe()返回的 未进行纬度处理
             next_state, reward, done, _ = self.env.step(action)
-            if time_step % 100 == 0:
+            if time_step % 7500 == 0:
                 # self.env.render(map_type="visit_count")
                 print(f"********************time_step: {time_step}********************")
                 # print(f"self.env.visit_count: {self.env.visit_count}")
                 # print(f"self.env.fov_map: {self.env.fov_map}")
                 
-                # plt.imshow(self.env.fov_map)
-                # plt.colorbar()
-                # plt.show()
+                plt.imshow(self.env.visit_count)
+                plt.colorbar()
+                plt.show()
             
             # 保存transition
-            trajectory.append((state, action, reward))
+            trajectory.append((processed_states, action, reward))
             
             state = next_state
             total_reward += reward
@@ -111,6 +111,7 @@ class Worker(mp.Process):
     def train(self, states, actions, advantages, returns):
         """更新网络参数"""
         # 1. 数据预处理：转换为PyTorch张量
+        states = [np.array(s) if isinstance(s, tuple) else s for s in states]
         states = torch.stack([torch.from_numpy(s) for s in states]).to(self.device)
         actions = torch.tensor(actions, dtype=torch.long).to(self.device)
         advantages = torch.tensor(advantages, dtype=torch.float32).to(self.device)

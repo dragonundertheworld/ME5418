@@ -10,6 +10,7 @@ from a3c_hypar import *
 class Worker(mp.Process):
     def __init__(self, env, name, global_network, optimizer, global_episode,gamma,max_episodes):
         super(Worker, self).__init__()
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.env = env
         self.name = name
         self.global_network = global_network
@@ -41,11 +42,13 @@ class Worker(mp.Process):
             
             if trajectory:  # 确保轨迹不为空
                 # 计算优势值和回报
-                states, actions, rewards = zip(*trajectory)
+                processed_states, actions, rewards = zip(*trajectory)
+                processed_states = list(processed_states)
                 advantages, returns = self.compute_advantages_and_returns(rewards)
                 
                 # 训练网络
-                self.train(states, actions, advantages, returns)
+                self.train(processed_states, actions, advantages, returns) 
+                # states,actions为tuple, advantages,returns为tensor
                 
                 # 同步本地网络与全局网络
                 self.sync_with_global()
@@ -59,6 +62,8 @@ class Worker(mp.Process):
         trajectory = []
         state = self.env.reset() # processed_state(3个参数)
         processed_states, _ = prepare_state(state) # 数据预处理
+        print("Length of processed_states:", len(processed_states))
+        print(f"type of processed_states: {type(processed_states)}")
 
         done = False
         total_reward = 0
@@ -67,24 +72,31 @@ class Worker(mp.Process):
         while not done:
             time_step += 1
             # 使用本地网络选择动作
-            action = self.local_network.act(processed_states)
+            if time_step == 1:
+                action = self.local_network.act(processed_states)
+            else:
+                action = self.local_network.act(state)
+
+            # states = processed_states
             
             # 执行动作 next_state是observe()返回的 未进行纬度处理
-            next_state, reward, done, _ = self.env.step(action)
+            state, reward, done, _ = self.env.step(action)
+            state, _ = prepare_state(state)
+
             if time_step % 7500 == 0:
                 # self.env.render(map_type="visit_count")
                 print(f"********************time_step: {time_step}********************")
                 # print(f"self.env.visit_count: {self.env.visit_count}")
                 # print(f"self.env.fov_map: {self.env.fov_map}")
                 
-                plt.imshow(self.env.visit_count)
-                plt.colorbar()
-                plt.show()
+                # plt.imshow(self.env.visit_count)
+                # plt.colorbar()
+                # plt.show()
             
             # 保存transition
-            trajectory.append((processed_states, action, reward))
+            trajectory.append((state, action, reward))
             
-            state = next_state
+            # state = next_state
             total_reward += reward
             
         print(f"Worker {self.name}, Episode Reward: {total_reward}")
@@ -110,13 +122,17 @@ class Worker(mp.Process):
     
     def train(self, states, actions, advantages, returns):
         """更新网络参数"""
-        # 1. 数据预处理：转换为PyTorch张量
-        states = [np.array(s) if isinstance(s, tuple) else s for s in states]
-        states = torch.stack([torch.from_numpy(s) for s in states]).to(self.device)
-        actions = torch.tensor(actions, dtype=torch.long).to(self.device)
+        # 1. 首先将列表转换为numpy数组
+        # states = [np.array(s) if isinstance(s, list) else s for s in states]
+        
+        # # 2. 然后转换为PyTorch张量
+        # states = torch.stack([torch.from_numpy(s) for s in states]).to(self.device)      
+        actions = torch.tensor(list(actions), dtype=torch.long).to(self.device)
         advantages = torch.tensor(advantages, dtype=torch.float32).to(self.device)
         returns = torch.tensor(returns, dtype=torch.float32).to(self.device)
         
+        print("Length of states:", len(states))
+        print(f"type of states: {type(states)}")
         # 2. 通过网络前向传播
         logits, values = self.local_network.forward(states)
         

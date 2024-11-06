@@ -28,7 +28,8 @@ def train():
     
     # 创建workers
     workers = []
-    num_workers = max(1, mp.cpu_count() // 2)  # 使用CPU核心数的一半作为worker数
+    #num_workers = max(1, mp.cpu_count() // 2)  # 使用CPU核心数的一半作为worker数
+    num_workers = 1
     print(f"num_workers is {num_workers}")
     for i in range(num_workers):
         worker = Worker(

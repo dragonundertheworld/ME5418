@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 
+size_expansion = 0
 
 def MapBuilder(row, col, ocu, size):
     '''
@@ -39,7 +40,7 @@ def MapBuilder(row, col, ocu, size):
             map[x, y] = 1
 
     # expend the map depending on the robot size 
-    expanded_map = np.kron(map, np.ones((size+2, size+2), dtype=int))
+    expanded_map = np.kron(map, np.ones((size+size_expansion, size+size_expansion), dtype=int))
 
     return expanded_map
 
@@ -56,7 +57,7 @@ def save_and_show_map(expanded_map, map_type):
     plt.title(file_name)  
     plt.show()
 # 调用MapBuilder并生成扩展后的迷宫
-# matrix = MapBuilder(10, 10, 0.3, 1)
+# matrix = MapBuilder(30, 30, 0.3, 1)
 # save_and_show_map(matrix, 'smaller_map')
 
 # expanded_map = MapBuilder(30, 30, 0.3, 7)

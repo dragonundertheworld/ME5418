@@ -28,25 +28,25 @@ CAR        = 2
 UNKNOWN    = -1
 
 # Initial values
-INIT_POS         = (4, 4)
+INIT_POS         = (25, 5)
 CAR_SIZE         = (1, 1)
 CAR_MATRIX       = np.full(CAR_SIZE, CAR) # car matrix is a 10x10 matrix with 2s
-STEP_SIZE        = 1
+STEP_SIZE        = 3
 MAP_SIZE         = (10, 10)
 NUM_OF_OBSTACLES = 10
 NUM_OF_RAYS      = 50
-FOV              = (3, 3)
+FOV              = (10, 10)
 FIGURE_SIZE      = (12, 8)
 
 # Rewards and penalties
-COLLISION_PENALTY    = -1
-EXPLORATION_REWARD   = 0.01
+COLLISION_PENALTY    = -10
+EXPLORATION_REWARD   = 0.1
 REVISIT_PENALTY      = -0.01
-MOVEMENT_PENALTY     = -0.1
-FINISH_REWARD        = 5
+MOVEMENT_PENALTY     = -0.01
+FINISH_REWARD        = 10
 
 # MAP_PATH = './test_map/map_2024-10-17_19-06-07.txt'
-MAP_PATH = './test_map/10x10_map.txt'
+MAP_PATH = './test_map/smaller_map.txt'
 
 class Car:
     """

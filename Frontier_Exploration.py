@@ -1,74 +1,149 @@
 import numpy as np
-import math
-import matplotlib.pyplot as plt
-from dummy_gym import DummyGym  # 从dummy_gym.py加载环境
+from dummy_gym import DummyGym
+from dummy_gym import EXPLORED, UNEXPLORED
 
-class FrontierExplorationAgent:
+env = DummyGym()
+
+class FrontierExplorer:
+    """
+    A class for performing frontier exploration in a custom gym environment.
+    """
+
     def __init__(self, env):
+        """
+        Initialize the FrontierExplorer with a given environment.
+        
+        Args:
+            env: An instance of the DummyGym environment.
+        """
         self.env = env
-        self.state = self.env.reset()
 
-    def detect_frontier_points(self, map):
-        """检测地图中的前沿点。"""
-        frontier_points = []
-        for x in range(1, map.shape[0] - 1):
-            for y in range(1, map.shape[1] - 1):
-                if map[x, y] == 1:  # 未探索的网格
-                    neighbors = [(x-1, y), (x+1, y), (x, y-1), (x, y+1)]
-                    if any(map[nx, ny] != 1 for nx, ny in neighbors):
-                        frontier_points.append((x, y))
-        return frontier_points
+    def identify_frontiers(self, visit_count):
+        """
+        Identify frontiers in the current Field of View (FOV).
+        
+        Args:
+            visit_count: The visit count of the environment grid.
+            
+        Returns:
+            List of frontier coordinates.
+        """
+        frontiers = []
+        rows, cols = visit_count.shape
+        for row in range(rows):
+            for col in range(cols):
+                if visit_count[row, col] == UNEXPLORED:
+                    # Unexplored cell
+                    for neighbor in self.get_neighbors(row, col, rows, cols):
+# ****************************stuck here*****************************************
+                        if visit_count[neighbor] == EXPLORED:
+                            # Neighbor is explored
+                            print('find frontier')
+                            frontiers.append((row, col))
+                            break
+        return frontiers
 
-    def get_action_toward_target(self, target, position):
-        """返回前往目标的动作（0: 上, 1: 下, 2: 左, 3: 右）。"""
-        dx, dy = target[0] - position[0], target[1] - position[1]
-        if abs(dx) > abs(dy):  # 优先水平方向
-            return 1 if dx > 0 else 0  # 向下如果 dx > 0，向上如果 dx < 0
-        else:
-            return 3 if dy > 0 else 2  # 向右如果 dy > 0，向左如果 dy < 0
+    @staticmethod
+    def get_neighbors(row, col, rows, cols):
+        """
+        Get valid neighbors of a cell in the grid.
+        
+        Args:
+            row: Row index of the cell.
+            col: Column index of the cell.
+            rows: Total number of rows in the grid.
+            cols: Total number of columns in the grid.
+        
+        Returns:
+            List of valid neighbor coordinates.
+        """
+        directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+        neighbor_list = [
+            (row + dr, col + dc) # Calculate the neighbor coordinates
+            for dr, dc in directions
+            if 0 <= row + dr < rows and 0 <= col + dc < cols # Check if the neighbor is within the grid
+        ]
+        print(f'neighbor_list is {neighbor_list}')
+        return neighbor_list
 
-    def visualize(self):
-        """初始化可视化图形。"""
-        self.fig, self.ax = plt.subplots()
-        self.img = self.ax.imshow(self.env.map, cmap="Blues", vmin=0, vmax=2)
-        self.car_marker, = self.ax.plot([], [], "ro")  # 小车标记为红色圆点
+    @staticmethod
+    def select_nearest_frontier(car_pos, frontiers):
+        """
+        Select the nearest frontier based on Manhattan distance.
+        
+        Args:
+            car_pos: The current position of the car.
+            frontiers: A list of frontier coordinates.
+        
+        Returns:
+            The coordinate of the nearest frontier.
+        """
+        print('selecting nearest frontier')
+        nearest_frontier = min(frontiers, key=lambda x: abs(x[0] - car_pos[0]) + abs(x[1] - car_pos[1]))
+        print(f'going to nearest frontier {nearest_frontier}')
+        return nearest_frontier
 
-    def update_visualization(self):
-        """更新可视化图形。"""
-        self.img.set_data(self.env.map)
-        self.car_marker.set_data(self.env.car.pos[1], self.env.car.pos[0])  # 更新小车位置
-        plt.draw()
-        plt.pause(0.1)  # 让绘图刷新
+    @staticmethod
+    def move_towards_target(car_pos, target):
+        """
+        Determine the action to move towards the target.
+        
+        Args:
+            car_pos: The current position of the car.
+            target: The target position.
+        
+        Returns:
+            The action to move closer to the target (0: Up, 1: Down, 2: Left, 3: Right).
+        """
+        if car_pos[0] > target[0]:
+            return 0  # Up
+        elif car_pos[0] < target[0]:
+            return 1  # Down
+        elif car_pos[1] > target[1]:
+            return 2  # Left
+        elif car_pos[1] < target[1]:
+            return 3  # Right
 
-    def explore_until_complete(self):
-        """探索直到地图完全探索完成。"""
-        self.visualize()
-        total_reward = 0
+    def explore(self):
+        """
+        Perform the exploration process in the environment.
+        """
         done = False
-        self.state = self.env.reset()
-
         while not done:
-            # 检查前沿点并决定下一步动作
-            frontier_points = self.detect_frontier_points(self.env.map)
-            if frontier_points:
-                distances = [math.dist(self.env.car.pos, fp) for fp in frontier_points]
-                nearest_fp = frontier_points[np.argmin(distances)]
-                action = self.get_action_toward_target(nearest_fp, self.env.car.pos)
-            else:
-                done = True  # 没有前沿点，地图完全探索
+            # Get the current observation
+            visit_count, _, car_pos = self.env.observe()
+            
+            # Identify frontiers
+            frontiers = self.identify_frontiers(visit_count)
+            
+            if not frontiers:
+                # No frontiers left, exploration is complete
+                print("No frontiers left to explore.")
                 break
+            
+            # Select the nearest frontier
+            print('ready to select nearest frontier')
+            target = self.select_nearest_frontier(car_pos, frontiers)
+            
+            # Move towards the frontier
+            print('moving towards frontier')
+            action = self.move_towards_target(car_pos, target)
+            print('taking action')
+            state, reward, done, _ = self.env.step(action)
+            
+            # Render the environment
+            self.env.render()
+            print(f"Action: {action}, Reward: {reward}")
 
-            # 执行动作并更新奖励
-            self.state, reward, done, _ = self.env.step(action)
-            total_reward += reward
 
-            # 更新可视化
-            self.update_visualization()
-
-        print(f"Exploration finished with total reward: {total_reward}")
-        plt.show()  # 保持图像
-
+# Example usage
 if __name__ == "__main__":
+    # Initialize the environment
     env = DummyGym()
-    agent = FrontierExplorationAgent(env)
-    agent.explore_until_complete()
+
+    # Create an instance of FrontierExplorer
+    explorer = FrontierExplorer(env)
+
+    # Perform the exploration
+    explorer.explore()
+

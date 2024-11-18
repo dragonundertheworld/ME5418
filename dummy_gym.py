@@ -24,26 +24,27 @@ import unittest
 # Map grid values
 OBSTACLE   = 0
 UNEXPLORED = 1
-CAR        = 2
+EXPLORED   = 2
+CAR        = -2
 UNKNOWN    = -1
 
 # Initial values
-INIT_POS         = (7, 14)
+INIT_POS         = (25, 5)
 CAR_SIZE         = (1, 1)
 CAR_MATRIX       = np.full(CAR_SIZE, CAR) # car matrix is a 10x10 matrix with 2s
-STEP_SIZE        = 1
+STEP_SIZE        = 3
 MAP_SIZE         = (10, 10)
 NUM_OF_OBSTACLES = 10
 NUM_OF_RAYS      = 50
-FOV              = (3, 3)
+FOV              = (10, 10)
 FIGURE_SIZE      = (12, 8)
 
 # Rewards and penalties
-COLLISION_PENALTY    = -1
-EXPLORATION_REWARD   = 0.01
-REVISIT_PENALTY      = -0.01
-MOVEMENT_PENALTY     = -0.1
-FINISH_REWARD        = 5
+COLLISION_PENALTY    = -5
+EXPLORATION_REWARD   = 0.1
+REVISIT_PENALTY      = 0
+MOVEMENT_PENALTY     = -0.01
+FINISH_REWARD        = 10
 
 # MAP_PATH = './test_map/map_2024-10-17_19-06-07.txt'
 MAP_PATH = './test_map/smaller_map.txt'
@@ -169,7 +170,7 @@ class DummyGym(gym.Env):
         self.detect_map = np.zeros(self.car.fov)
         
         # Initialize visit counts for each grid
-        self.visit_count = np.zeros(self.map.shape)
+        self.visit_count = np.ones(self.map.shape) # Initialize all grids as unexplored
         
         # Action space: 4 discrete actions (Up, Down, Left, Right)
         self.action_space = spaces.Discrete(4)  # 0: Up, 1: Down, 2: Left, 3: Right
@@ -387,7 +388,7 @@ class DummyGym(gym.Env):
             detect_right_bound > self.map_size[1]):
             self.COLLISION_FLAG = True
             self.car.pos = old_pos
-            # print("Collision! Car stays in the same position: ", self.car.pos)
+            print("Collision! Car stays in the same position: ", self.car.pos)
         else:
             if self.is_slippery:
                 if np.random.rand() < 0.2: # Slip
@@ -399,7 +400,7 @@ class DummyGym(gym.Env):
                     print(f"Car moves {self.step_size} from {old_pos} to {new_pos}")
             else:
                 self.SLIPPERY_FLAG = False
-                # print(f"Car moves {movement} {self.car.step_size} units from {old_pos} to {new_pos}")
+                print(f"Car moves {movement} {self.car.step_size} units from {old_pos} to {new_pos}")
 
         reward, done = self.calculate_reward_and_done()
 
@@ -419,12 +420,12 @@ class DummyGym(gym.Env):
         for grid_location in fov_grids_location:
             if self.visit_count[grid_location] == UNEXPLORED:  # New grid
                 reward += EXPLORATION_REWARD
+                self.visit_count[grid_location] = EXPLORED
             else:
                 reward += REVISIT_PENALTY  # Penalty for revisiting
-            self.visit_count[grid_location] += 1
 
         # Check if map is fully explored
-        if np.all(self.visit_count != 0):
+        if np.all(self.visit_count == EXPLORED):
             reward += FINISH_REWARD  # Big reward for completing exploration
             done = True
         return reward,done
@@ -433,7 +434,7 @@ class DummyGym(gym.Env):
     def reset(self):
         self.car = Car()
         self.fov_map = np.zeros(self.car.fov)
-        self.visit_count = np.zeros(self.map_size)
+        self.visit_count = np.ones(self.map_size)
         self.state = self.observe()
         return self.state
 

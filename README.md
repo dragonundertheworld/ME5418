@@ -20,20 +20,19 @@ The goal of this project is to use a reinforcement learning-based DQN algorithm 
 The core components of this project include:
 - **`dummy_DQN.ipynb`**: A Jupyter Notebook implementing the DQN algorithm.
 - **`dummy_gym.py`**: A custom Gym environment script defining the observation space, action space, and reward function for the exploration task.
-- **`small_map.txt`**: A text file defining the layout of the map with grid-based information.
+- **`smaller_map.txt`**: A text file defining the layout of the map with grid-based information.
 - **`environment.yml`**: A YAML file for creating a Conda environment with all necessary dependencies.
-- **`dqn_loss_output`**: A folder that contains different output of model with different settings.
 
 ## Environment Details
 The environment is designed using the Gym interface and includes the following features:
 - **Observation Space**: The robot's field of view (FOV), position in the map, and a count of visits for each grid cell.
 - **Action Space**: The robot can move in four directions—up, down, left, and right.
 - **Reward System**:
-  - **Penalty for colliding with obstacles**: -1
-  - **Reward for exploring a new area**: 0.01 times the visit count
+  - **Penalty for colliding with obstacles**: -10
+  - **Reward for exploring a new area**: 0.1 times the visit count
   - **Penalty for revisiting explored areas**: -0.01 times the visit count
-  - **Movement Penalty**: -0.1 for each move
-  - **Big reward for completing exploration**: +5
+  - **Movement Penalty**: -0.01 for each move
+  - **Big reward for completing exploration**: +10
 
 ## Download and set up environment
 To set up this project, follow these steps:
@@ -51,16 +50,16 @@ To set up this project, follow these steps:
 
 ## Usage
 1. **Set up the custom environment**:
-   Ensure that `dummy_gym.py`, `small_map.txt`, and `dummy_DQN.ipynb` are in the same directory. The custom environment should automatically recognize the map layout defined in `small_map.txt`.
+   Ensure that `dummy_gym.py` and `dummy_DQN.ipynb` are in the same directory. The custom environment should automatically recognize the map layout defined in `smaller_map.txt` which is under `test_map` folder.
 
 2. **Run the Jupyter Notebook**:
    Open `dummy_DQN.ipynb` using Jupyter Notebook:
    ```bash
    jupyter notebook dummy_DQN.ipynb
    ```
-   There should be already results of this note book. If not, just follow the instructions in the notebook to train the DQN agent on the custom environment. The notebook includes code for:
+   There should be already results of this note book. If there's nothing or you want to train the model yourself, just follow the instructions in the notebook to train the DQN agent on the custom environment, trained model will be stored under folder `train_brakpoint`. The notebook includes code for:
    - Defining the DQN model architecture
-   - Training the DQN agent
+   - Showing visit_count map while training the DQN agent
    - Plotting results and performance metrics
 
 3. **Evaluate the performance**:
@@ -68,12 +67,12 @@ To set up this project, follow these steps:
 
 ## Customization
 You can customize various aspects of the environment, such as:
-- **Map Size and Shape**: Modify the map dimensions and obstacle locations in `small_map.txt`.
+- **Map Size and Shape**: Modify the map dimensions and obstacle locations in `smaller_map.txt`.
 - **Reward Structure**: Change the reward or penalty values to encourage different behaviors.
 - **Network Architecture**: Experiment with different DQN architectures or hyperparameters in `dummy_DQN.ipynb`.
 
 ## Map Configuration
-The map layout is defined in the `small_map.txt` file, where different values represent different elements of the grid. For example:
+The map layout is defined in the `smaller_map.txt` file, where different values represent different elements of the grid. For example:
 - **0**: Represents an obstacle.
 - **1**: Represents unexplored areas.
 - **2**: Represents the car's starting position.
@@ -81,7 +80,8 @@ The map layout is defined in the `small_map.txt` file, where different values re
 You can modify this file to create different scenarios for testing the DQN agent's performance.
 
 ## Results
-The loss of our model within 4 epochs decreases rapidly even after multiple attempts compared to models with other settings and structures, which shows the robustness and high performance of the model.
+- Car can usually finish 1 epsiode after training around 300 time steps
+- With training more and more time steps, Q-values(here we have 4 actions, hence 4 Q-values in each state) in one state are getting closer and closer to each other, which shows our policy is getting more reasonable for our exploration.
 
 ## Contributors
 - **Cao Zhihan** - In charge of `dummy_gym.py` `dummy_DQN.ipynb` `dummy_gym_unnitest.py` and `README.md`

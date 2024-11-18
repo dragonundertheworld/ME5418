@@ -1,5 +1,6 @@
 from dummy_gym import *
 import matplotlib.pyplot as plt
+from MapBuilder import save_and_show_map
 
 env = DummyGym()
 map = env.map
@@ -49,10 +50,10 @@ class RRTExploration:
                 self.tree.append(new_node)
                 self.update_map(new_node)
                 if self.is_fully_explored():
-                    # print(map)
+                    print(map)
                     break
-        # 出图
-        print(map)
+        # show map
+        save_and_show_map(map, 'rrt')
     
     def update_map(self, node):
         x, y = int(node[0]), int(node[1])

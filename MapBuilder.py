@@ -2,6 +2,7 @@ import random
 import numpy as np
 import matplotlib.pyplot as plt
 import time
+import os
 
 size_expansion = 0
 
@@ -55,6 +56,14 @@ def save_and_show_map(expanded_map, map_type):
     plt.imshow(expanded_map, cmap='gray', interpolation='none')
     plt.colorbar()  
     plt.title(file_name)  
+    plt.show()
+
+def save_and_show_png(map, map_path, map_name):
+    plt.imshow(map, cmap='gray', interpolation='none')
+    plt.colorbar()  
+    plt.title(map_name)  
+    path = os.path.join(map_path, f'{map_name}.png')
+    plt.savefig(path)
     plt.show()
 # 调用MapBuilder并生成扩展后的迷宫
 # matrix = MapBuilder(30, 30, 0.3, 1)

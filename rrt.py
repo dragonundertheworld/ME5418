@@ -1,6 +1,6 @@
 from dummy_gym import *
 import matplotlib.pyplot as plt
-from MapBuilder import save_and_show_map
+from MapBuilder import save_and_show_map, save_and_show_png
 
 env = DummyGym()
 map = env.map
@@ -51,9 +51,9 @@ class RRTExploration:
                 time += 1
                 self.tree.append(new_node)
                 self.update_map(new_node)
-                save_and_show_map(map, 'rrt') if time % 500 == 0 else None
+                save_and_show_png(map, './rrt_result', f'rrt after {time} steps') if time % 500 == 0 else None
                 if self.is_fully_explored():
-                    save_and_show_map(map, 'rrt')
+                    save_and_show_png(map, './rrt_result', f'rrt fully explored after {time} steps')
                     break
         # show map
         print('time is :', time)

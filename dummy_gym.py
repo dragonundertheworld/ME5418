@@ -46,8 +46,8 @@ MOVEMENT_PENALTY     = -0.1
 FINISH_REWARD        = 5
 
 # MAP_PATH = './test_map/map_2024-10-17_19-06-07.txt'
-# MAP_PATH = './test_map/smaller_map.txt'
-MAP_PATH = './test_map/smaller_map_2024-11-04_19-06-31.txt'
+MAP_PATH = './test_map/smaller_map.txt'
+# MAP_PATH = './test_map/smaller_map_2024-11-04_19-06-31.txt'
 
 class Car:
     """

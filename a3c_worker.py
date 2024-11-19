@@ -32,10 +32,11 @@ class Worker(mp.Process):
     def run(self):
         """Worker的主循环"""
         while self.global_episode.value < self.max_episodes:
-            time = 0;
+            time = 0
             time += 1
             if time % 100 == 0:
                 print(f"Worker {self.name}, Episode: {self.global_episode.value}")
+
                 # time.sleep(1)
             # 收集一个episode的数据
             trajectory = self.collect_trajectory()
@@ -87,7 +88,9 @@ class Worker(mp.Process):
                 # self.env.render(map_type="visit_count")
                 print(f"********************time_step: {time_step}********************")
                 # print(f"self.env.visit_count: {self.env.visit_count}")
-                # print(f"self.env.fov_map: {self.env.fov_map}")
+                # print(f"self.env.fov_map: {self.env.fov_map}
+                print("save model")
+                torch.save(self.global_network.state_dict(), 'model_parameters.pth')  # 保存模型参数到文件      
                 
                 # plt.imshow(self.env.visit_count)
                 # plt.colorbar()

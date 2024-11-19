@@ -87,5 +87,5 @@ def test():
 if __name__ == "__main__":
     torch.cuda.empty_cache()
     mp.set_start_method('spawn')  # 设置多进程启动方法
-    train()
-    # test()  
+    # train()
+    test()  

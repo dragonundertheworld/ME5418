@@ -3,6 +3,7 @@ import torch.multiprocessing as mp
 from torch import optim
 from a3c_hypar import *
 from a3c_worker import Worker
+from dummy_gym import DummyGym
 
 def train():
     # 设置GPU内存分配策略
@@ -67,15 +68,17 @@ def test():
     global_network.eval()  # 设置为评估模式
 
     # 测试环境
-    env = ...  # 初始化测试环境
+    env = DummyGym()  # 初始化测试环境
     state = env.reset()  # 重置环境以获取初始状态
     done = False
 
     step = 0
 
+    prepare_states, _ = prepare_state(state)
+
     while not done:
         with torch.no_grad():  # 不需要计算梯度
-            action = global_network.select_action(state)  # 选择动作
+            action = global_network.act(prepare_states)  # 选择动作
         state, reward, done, _ = env.step(action)  # 执行动作并获取下一个状态和奖励
         step += 1
         if step % 100 == 0:

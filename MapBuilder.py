@@ -47,7 +47,7 @@ def MapBuilder(row, col, ocu, size):
 def save_and_show_map(expanded_map, map_type):
     # save map file
     timestamp = time.strftime("%Y-%m-%d_%H-%M-%S")
-    file_name = f"{map_type}_{timestamp}.txt"  
+    file_name = f"{map_type}.txt"  
     file_path = f'./test_map/{file_name}'
     with open(file_path, 'w') as file:
         np.savetxt(file, expanded_map, fmt='%d')

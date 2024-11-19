@@ -1,6 +1,6 @@
 import numpy as np
 from dummy_gym import DummyGym
-from dummy_gym import EXPLORED, UNEXPLORED
+from dummy_gym import EXPLORED, UNEXPLORED, STEP_SIZE
 
 env = DummyGym()
 
@@ -20,7 +20,7 @@ class FrontierExplorer:
 
     def identify_frontiers(self, visit_count):
         """
-        Identify frontiers in the current Field of View (FOV).
+        Identify frontiers in the current visit count map.
         
         Args:
             visit_count: The visit count of the environment grid.
@@ -32,11 +32,10 @@ class FrontierExplorer:
         rows, cols = visit_count.shape
         for row in range(rows):
             for col in range(cols):
-                if visit_count[row, col] == UNEXPLORED:
-                    # Unexplored cell
+                if visit_count[row, col] == EXPLORED:
                     for neighbor in self.get_neighbors(row, col, rows, cols):
 # ****************************stuck here*****************************************
-                        if visit_count[neighbor] == EXPLORED:
+                        if visit_count[neighbor] == UNEXPLORED:
                             # Neighbor is explored
                             print('find frontier')
                             frontiers.append((row, col))
@@ -57,7 +56,7 @@ class FrontierExplorer:
         Returns:
             List of valid neighbor coordinates.
         """
-        directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+        directions = [(-STEP_SIZE, 0), (STEP_SIZE, 0), (0, -STEP_SIZE), (0, STEP_SIZE)]
         neighbor_list = [
             (row + dr, col + dc) # Calculate the neighbor coordinates
             for dr, dc in directions

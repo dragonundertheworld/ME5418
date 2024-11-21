@@ -36,7 +36,6 @@ class FrontierExplorer:
                     for neighbor in self.get_neighbors(row, col, rows, cols):
                         if self.env.visit_count[neighbor] == EXPLORED and self.env.map[neighbor] != OBSTACLE:
                             # Neighbor is explored
-                            print('find frontier at', row, col)
                             frontiers.append((row, col))
                             break
         return frontiers
@@ -61,7 +60,7 @@ class FrontierExplorer:
             for dr, dc in directions
             if 0 <= row + dr < rows and 0 <= col + dc < cols # Check if the neighbor is within the grid
         ]
-        print(f'neighbor_list is {neighbor_list}')
+        # print(f'neighbor_list is {neighbor_list}')
         return neighbor_list
 
     @staticmethod
@@ -76,9 +75,9 @@ class FrontierExplorer:
         Returns:
             The coordinate of the nearest frontier.
         """
-        print('selecting nearest frontier')
+        # print('selecting nearest frontier')
         nearest_frontier = min(frontiers, key=lambda x: abs(x[0] - car_pos[0]) + abs(x[1] - car_pos[1]))
-        print(f'going to nearest frontier {nearest_frontier}')
+        # print(f'going to nearest frontier {nearest_frontier}')
         return nearest_frontier
 
     def move_towards_target(self, car_pos, target):
@@ -109,6 +108,7 @@ class FrontierExplorer:
         time_step = 0
         while not done:
             # Get the current observation
+
             image_list.append(self.env.visit_count / np.max(self.env.visit_count) * 255)
             save_to_gif(image_list, 'frontier_gif', 'frontier_exploration.gif')
             visit_count, _, car_pos = self.env.observe()
@@ -134,6 +134,9 @@ class FrontierExplorer:
             
             # Render the environment
             self.env.render(map_type='visit_count') if time_step % 50 == 0 else None
+            cells_visited = self.env.visit_count[self.env.visit_count == EXPLORED].shape[0] # 计算已经访问的cell数量
+            cells = self.env.map_size[0]*self.env.map_size[1]
+            print(f"Cells visited: {cells_visited}/{cells} at time step: {time_step}")
             print(f"Action: {action} at time step {time_step}")
             time_step += 1
 

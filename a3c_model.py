@@ -109,7 +109,8 @@ class ActorCriticNet(nn.Module):
         else:
             action = torch.multinomial(probs, 1).item()
         return action
-
+    
+    @property
     def act(self, processed_states):
         logits, _ = self.forward(processed_states) # actor_output
         probs = torch.softmax(logits, dim=-1) # 计算动作概率分布

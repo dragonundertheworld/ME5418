@@ -45,18 +45,21 @@ class RRTExploration:
         return True
     
     def explore(self):
+        time = 0
         for _ in range(self.max_samples):
             random_point = self.random_sample()
             nearest = self.nearest_node(random_point)
             new_node = self.steer(nearest, random_point)
             if self.is_valid(new_node):
+                time += 1
                 self.tree.append(new_node)
                 self.update_map(new_node)
+                save_and_show_png(map, './rrt_result', f'rrt after {time} steps') if time % 500 == 0 else None
                 if self.is_fully_explored():
-                    print(map)
+                    save_and_show_png(map, './rrt_result', f'rrt fully explored after {time} steps')
                     break
         # show map
-        save_and_show_map(map, 'rrt')
+        print('time is :', time)
     
     def update_map(self, node):
         x, y = int(node[0]), int(node[1])

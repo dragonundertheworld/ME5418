@@ -20,6 +20,7 @@ from gym import spaces
 from MapBuilder import MapBuilder
 import math
 import unittest
+from PIL import Image
 
 # Map grid values
 OBSTACLE   = 0
@@ -492,7 +493,22 @@ class DummyGym(gym.Env):
             plt.colorbar()
             plt.show()
         
+def save_to_gif(image_list, output_path, gif_name):
+    '''
+    Save a list of images to a gif
+    '''
+    # turn image list into gif
+    pil_images = [Image.fromarray(image) for image in image_list]
 
+    # save gif
+    path = os.path.join(output_path, gif_name)
+    pil_images[0].save(
+        path,
+        save_all=True,
+        append_images=pil_images[1:],  # other frames
+        duration=8.3,  # frame duration in ms
+        loop=0  # infinite loop
+    )
 # Uncomment the following code to perform an example usage:
 # env = DummyGym() 
 # # env.load_state('test.npz')

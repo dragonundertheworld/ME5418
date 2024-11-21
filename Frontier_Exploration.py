@@ -1,8 +1,8 @@
 import numpy as np
 from dummy_gym import DummyGym
-from dummy_gym import EXPLORED, UNEXPLORED, STEP_SIZE
-
-env = DummyGym()
+from dummy_gym import EXPLORED, UNEXPLORED, STEP_SIZE, OBSTACLE
+from dummy_gym import save_to_gif
+import random
 
 class FrontierExplorer:
     """
@@ -18,7 +18,7 @@ class FrontierExplorer:
         """
         self.env = env
 
-    def identify_frontiers(self, visit_count):
+    def identify_frontiers(self):
         """
         Identify frontiers in the current visit count map.
         
@@ -29,15 +29,14 @@ class FrontierExplorer:
             List of frontier coordinates.
         """
         frontiers = []
-        rows, cols = visit_count.shape
+        rows, cols = self.env.visit_count.shape
         for row in range(rows):
             for col in range(cols):
-                if visit_count[row, col] == EXPLORED:
+                if self.env.visit_count[row, col] == UNEXPLORED:
                     for neighbor in self.get_neighbors(row, col, rows, cols):
-# ****************************stuck here*****************************************
-                        if visit_count[neighbor] == UNEXPLORED:
+                        if self.env.visit_count[neighbor] == EXPLORED and self.env.map[neighbor] != OBSTACLE:
                             # Neighbor is explored
-                            print('find frontier')
+                            print('find frontier at', row, col)
                             frontiers.append((row, col))
                             break
         return frontiers
@@ -82,8 +81,7 @@ class FrontierExplorer:
         print(f'going to nearest frontier {nearest_frontier}')
         return nearest_frontier
 
-    @staticmethod
-    def move_towards_target(car_pos, target):
+    def move_towards_target(self, car_pos, target):
         """
         Determine the action to move towards the target.
         
@@ -94,26 +92,29 @@ class FrontierExplorer:
         Returns:
             The action to move closer to the target (0: Up, 1: Down, 2: Left, 3: Right).
         """
-        if car_pos[0] > target[0]:
+        if car_pos[0] > target[0] and all(self.env.map[target[0]:car_pos[0], car_pos[1]] != OBSTACLE):
             return 0  # Up
-        elif car_pos[0] < target[0]:
+        elif car_pos[0] < target[0] and all(self.env.map[car_pos[0]:target[0], car_pos[1]] != OBSTACLE):
             return 1  # Down
-        elif car_pos[1] > target[1]:
+        elif car_pos[1] > target[1] and all(self.env.map[car_pos[0], target[1]:car_pos[1]] != OBSTACLE):
             return 2  # Left
-        elif car_pos[1] < target[1]:
-            return 3  # Right
+        else:
+            return 3
 
     def explore(self):
         """
         Perform the exploration process in the environment.
         """
         done = False
+        time_step = 0
         while not done:
             # Get the current observation
+            image_list.append(self.env.visit_count / np.max(self.env.visit_count) * 255)
+            save_to_gif(image_list, 'frontier_gif', 'frontier_exploration.gif')
             visit_count, _, car_pos = self.env.observe()
             
             # Identify frontiers
-            frontiers = self.identify_frontiers(visit_count)
+            frontiers = self.identify_frontiers()
             
             if not frontiers:
                 # No frontiers left, exploration is complete
@@ -127,18 +128,23 @@ class FrontierExplorer:
             # Move towards the frontier
             print('moving towards frontier')
             action = self.move_towards_target(car_pos, target)
+            self.env.render() if action == None else None
             print('taking action')
             state, reward, done, _ = self.env.step(action)
             
             # Render the environment
-            self.env.render()
-            print(f"Action: {action}, Reward: {reward}")
+            self.env.render(map_type='visit_count') if time_step % 50 == 0 else None
+            print(f"Action: {action} at time step {time_step}")
+            time_step += 1
 
 
 # Example usage
 if __name__ == "__main__":
     # Initialize the environment
     env = DummyGym()
+    image_list = []
+    image_list.append(env.visit_count)
+    env.step(random.choice([0, 1, 2, 3]))
 
     # Create an instance of FrontierExplorer
     explorer = FrontierExplorer(env)

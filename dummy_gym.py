@@ -342,7 +342,8 @@ class DummyGym(gym.Env):
                 
                 # Mark the cell as visible in the detected environment
                 self.detect_map[int_r, int_c] = UNEXPLORED
-        
+    
+    @property
     # Step function for interacting with the environment
     def step(self, action):
         old_pos = self.car.pos

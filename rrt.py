@@ -1,19 +1,22 @@
 from dummy_gym import *
 import matplotlib.pyplot as plt
 from MapBuilder import save_and_show_map
+from a3c_hypar import *
 
-env = DummyGym()
+
+# processed_states
 map = env.map
 
 
 class RRTExploration:
-    def __init__(self, start, map, map_size, step_size, max_samples):
+    def __init__(self, start, map, map_size, step_size, max_samples, processed_states):
         self.start = start
         self.map_size = map_size
         self.step_size = step_size
         self.max_samples = max_samples
         self.tree = [start]  # 初始化树
         self.map = map  # 0: 障碍物, 1: 未知, 2: 已探索区域
+        visit_count, fov_map, car_pos = processed_states
     
     def random_sample(self):
         x = np.random.uniform(0, self.map_size[0])
@@ -68,5 +71,5 @@ map_size = (30, 30)
 max_samples = 10000
 
 # 执行探索
-rrt = RRTExploration(start, map, map_size, STEP_SIZE, max_samples)
+rrt = RRTExploration(start, map, map_size, 5, max_samples, processed_states)
 rrt.explore()

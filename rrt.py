@@ -74,7 +74,10 @@ class RRTExploration:
             for j in range(-fov_height // 2, fov_height // 2 + 1):
                 fov_x, fov_y = x + i, y + j
                 if 0 <= fov_x < self.map_size[0] and 0 <= fov_y < self.map_size[1]:
-                    self.map[fov_x, fov_y] = 2  # 标记视角范围为已探索区域
+                    if self.map[fov_x, fov_y] == 0:
+                        pass
+                    elif self.map[fov_x, fov_y] == 1:    
+                        self.map[fov_x, fov_y] = 2  # 标记视角范围为已探索区域
     
     def is_fully_explored(self):
         return np.all(self.map != 1) 

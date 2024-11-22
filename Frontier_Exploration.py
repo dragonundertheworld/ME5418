@@ -1,7 +1,5 @@
 import numpy as np
-from dummy_gym import DummyGym
-from dummy_gym import EXPLORED, UNEXPLORED, STEP_SIZE, OBSTACLE
-from dummy_gym import save_to_gif
+from dummy_gym import *
 import random
 
 class FrontierExplorer:
@@ -107,10 +105,14 @@ class FrontierExplorer:
         """
         done = False
         time_step = 0
+        image_list = []
+        titles = []
         while not done:
             # Get the current observation
-            image_list.append(self.env.visit_count / np.max(self.env.visit_count) * 255)
-            save_to_gif(image_list, 'frontier_gif', 'frontier_exploration.gif')
+            combined_image = combine_all(self.env)
+            image_list.append(combined_image / np.max(combined_image) * 255)
+            titles.append(f"{time_step}")
+            save_to_gif(image_list, 'frontier_gif', 'frontier_exploration.gif', titles) if time_step % 3 == 0 else None
             visit_count, _, car_pos = self.env.observe()
             
             # Identify frontiers
@@ -142,8 +144,6 @@ class FrontierExplorer:
 if __name__ == "__main__":
     # Initialize the environment
     env = DummyGym()
-    image_list = []
-    image_list.append(env.visit_count)
     env.step(random.choice([0, 1, 2, 3]))
 
     # Create an instance of FrontierExplorer

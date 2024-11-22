@@ -39,7 +39,7 @@ class RRTExploration:
     
     def is_valid(self, new_node):
         # 检查是否在地图范围内且无碰撞
-        x, y = int(new_node[0]), int(new_node[1])
+        y, x = int(new_node[0]), int(new_node[1])
         if x < 0 or y < 0 or x >= self.map_size[0] or y >= self.map_size[1]:
             return False
         elif self.map[x, y] == 0:  
@@ -53,8 +53,9 @@ class RRTExploration:
             random_point = self.random_sample()
             nearest = self.nearest_node(random_point)
             new_node = self.steer(nearest, random_point)
+            x, y = int(new_node[0]), int(new_node[1])
 
-
+            # if self.map[y, x] == 1:
             if self.is_valid(new_node):
                 time += 1
                 self.tree.append(new_node)
@@ -64,6 +65,9 @@ class RRTExploration:
                 if self.is_fully_explored():
                     # save_and_show_png(map, './rrt_result', f'rrt fully explored after {time} steps')
                     break
+        # elif self.map[y, x] == 0:
+            #     pass
+
         print('time is :', time)
     
     def update_map(self, node):

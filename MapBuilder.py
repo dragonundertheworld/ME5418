@@ -65,9 +65,3 @@ def save_and_show_png(map, map_path, map_name):
     path = os.path.join(map_path, f'{map_name}.png')
     plt.savefig(path)
     plt.show()
-# 调用MapBuilder并生成扩展后的迷宫
-# matrix = MapBuilder(30, 30, 0.3, 1)
-# save_and_show_map(matrix, 'smaller_map')
-
-# expanded_map = MapBuilder(30, 30, 0.3, 7)
-# save_and_show_map(expanded_map,'test01')

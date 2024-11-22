@@ -17,7 +17,7 @@ class RRTExploration:
         self.max_samples = max_samples
         self.tree = [start]  # 初始化树
         self.map = map  # 0: 障碍物, 1: 未知, 2: 已探索区域
-        self.car_fov = (3, 3)
+        self.car_fov = (10, 10)
         visit_count, fov_map, car_pos = processed_states
     
     def random_sample(self):
@@ -32,7 +32,7 @@ class RRTExploration:
     
     def steer(self, from_node, to_node):
         direction = to_node - from_node
-        distance = np.linalg.norm(direction)
+        distance = np.linalg.norm(direction) # 欧氏距离
         if distance > self.step_size:
             direction = direction / distance * self.step_size
         return from_node + direction
@@ -42,9 +42,10 @@ class RRTExploration:
         x, y = int(new_node[0]), int(new_node[1])
         if x < 0 or y < 0 or x >= self.map_size[0] or y >= self.map_size[1]:
             return False
-        if self.map[x, y] == 0:  
+        elif self.map[x, y] == 0:  
             return False
-        return True
+        else:
+            return True
     
     def explore(self):
         time = 0
@@ -59,31 +60,33 @@ class RRTExploration:
                 self.tree.append(new_node)
                 self.update_map(new_node)
                 self.show_map(new_node)
-                save_and_show_png(map, './rrt_result', f'rrt after {time} steps') if time % 500 == 0 else None
+                # save_and_show_png(map, './rrt_result', f'rrt after {time} steps') if time % 500 == 0 else None
                 if self.is_fully_explored():
-                    save_and_show_png(map, './rrt_result', f'rrt fully explored after {time} steps')
+                    # save_and_show_png(map, './rrt_result', f'rrt fully explored after {time} steps')
                     break
         print('time is :', time)
     
     def update_map(self, node):
         x, y = int(node[0]), int(node[1])
-        self.map[x, y] = 2  # 标记为已探索区域
+        if self.map[y, x] == 1:
+            self.map[y, x] = 2  # 标记为已探索区域
         # 更新小车的视角范围
         fov_width, fov_height = self.car_fov
         for i in range(-fov_width // 2, fov_width // 2 + 1):
             for j in range(-fov_height // 2, fov_height // 2 + 1):
                 fov_x, fov_y = x + i, y + j
                 if 0 <= fov_x < self.map_size[0] and 0 <= fov_y < self.map_size[1]:
-                    if self.map[fov_x, fov_y] == 0:
-                        pass
-                    elif self.map[fov_x, fov_y] == 1:    
-                        self.map[fov_x, fov_y] = 2  # 标记视角范围为已探索区域
+                    if self.map[fov_y, fov_x] == 0:
+                        self.map[fov_y, fov_x] = 0  # 标记视角范围为已探索区域
+                    elif self.map[fov_y, fov_x] == 1:
+                        self.map[fov_y, fov_x] = 2  # 标记视角范围为已探索区域
     
     def is_fully_explored(self):
         return np.all(self.map != 1) 
     
     def show_map(self, node):
-        plt.imshow(self.map, cmap='gray', origin='lower')
+        plt.xlabel('X-axis')
+        plt.imshow(self.map, cmap='gray')
         plt.colorbar(label='Map Values')
         
         # 绘制小车的视角范围
@@ -94,19 +97,19 @@ class RRTExploration:
                 fov_x, fov_y = x + i, y + j
                 if 0 <= fov_x < self.map_size[0] and 0 <= fov_y < self.map_size[1]:
                     plt.scatter(fov_x, fov_y, color='red', s=10)  # 用红色点表示视角范围
-
+        # plt.scatter(y, x, color='green', s=50)
         plt.scatter(x, y, color='blue', s=50)  # 用蓝色点表示小车位置
         plt.title('Map with Car FOV')
         plt.xlabel('X-axis')
         plt.ylabel('Y-axis')
-        plt.pause(0.1)  # 暂停以便显示更新
+        plt.pause(0.3)  # 暂停以便显示更新
         plt.clf()  # 清除当前图形以便下次绘制
 
 # 初始化参数
-start = np.array([0, 0])
+start = np.array([5, 25])
 map_size = (30, 30)
 max_samples = 10000
 
 # 执行探索
-rrt = RRTExploration(start, map, map_size, 5, max_samples, processed_states)
+rrt = RRTExploration(start, map, map_size, 3, max_samples, processed_states)
 rrt.explore()

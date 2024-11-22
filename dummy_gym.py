@@ -514,7 +514,7 @@ def save_to_gif(image_list, output_path, gif_name, titles):
         text_size = draw.textsize(title, font=font)
         # text at right corner
         text_position = (image.width - text_size[0], image.height - text_size[1])
-        draw.text(text_position, title, font=font, fill="white")
+        draw.text(text_position, title, font=font, fill="red")
 
     # save gif
     path = os.path.join(output_path, gif_name)

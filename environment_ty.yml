@@ -1,4 +1,4 @@
-name: me5418-group10
+name: me5418-group10-test
 channels:
   - pytorch
   - nvidia

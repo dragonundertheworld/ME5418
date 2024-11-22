@@ -2,7 +2,9 @@ import random
 import numpy as np
 import matplotlib.pyplot as plt
 import time
+import os
 
+size_expansion = 0
 
 def MapBuilder(row, col, ocu, size):
     '''
@@ -39,14 +41,14 @@ def MapBuilder(row, col, ocu, size):
             map[x, y] = 1
 
     # expend the map depending on the robot size 
-    expanded_map = np.kron(map, np.ones((size+2, size+2), dtype=int))
+    expanded_map = np.kron(map, np.ones((size+size_expansion, size+size_expansion), dtype=int))
 
     return expanded_map
 
 def save_and_show_map(expanded_map, map_type):
     # save map file
     timestamp = time.strftime("%Y-%m-%d_%H-%M-%S")
-    file_name = f"{map_type}_{timestamp}.txt"  
+    file_name = f"{map_type}.txt"  
     file_path = f'./test_map/{file_name}'
     with open(file_path, 'w') as file:
         np.savetxt(file, expanded_map, fmt='%d')
@@ -55,9 +57,11 @@ def save_and_show_map(expanded_map, map_type):
     plt.colorbar()  
     plt.title(file_name)  
     plt.show()
-# 调用MapBuilder并生成扩展后的迷宫
-# matrix = MapBuilder(10, 10, 0.3, 1)
-# save_and_show_map(matrix, 'smaller_map')
 
-# expanded_map = MapBuilder(30, 30, 0.3, 7)
-# save_and_show_map(expanded_map,'test01')
+def save_and_show_png(map, map_path, map_name):
+    plt.imshow(map, cmap='gray', interpolation='none')
+    plt.colorbar()  
+    plt.title(map_name)  
+    path = os.path.join(map_path, f'{map_name}.png')
+    plt.savefig(path)
+    plt.show()

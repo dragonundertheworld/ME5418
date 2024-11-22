@@ -48,6 +48,7 @@ FINISH_REWARD        = 10
 
 # MAP_PATH = './test_map/map_2024-10-17_19-06-07.txt'
 MAP_PATH = './test_map/smaller_map.txt'
+# MAP_PATH = './test_map/smaller_map_2024-11-04_19-06-31.txt'
 
 class Car:
     """
@@ -342,7 +343,8 @@ class DummyGym(gym.Env):
                 
                 # Mark the cell as visible in the detected environment
                 self.detect_map[int_r, int_c] = UNEXPLORED
-        
+    
+    @property
     # Step function for interacting with the environment
     def step(self, action):
         old_pos = self.car.pos
@@ -494,24 +496,24 @@ class DummyGym(gym.Env):
         
 
 # Uncomment the following code to perform an example usage:
-env = DummyGym() 
-# env.load_state('test.npz')
-env.render() # render all maps at once
-print(env.action_space.n)
+# env = DummyGym() 
+# # env.load_state('test.npz')
+# env.render() # render all maps at once
+# print(env.action_space.n)
 
-# Perform a step
-env.step(0) # Move up
+# # Perform a step
+# env.step(0) # Move up
 
-# Render the maps after the step
-env.render()
+# # Render the maps after the step
+# env.render()
 
-# Perform another step and render
-env.step(2) # Move left
-# env.save_state('test.npz')
-env.render()
+# # Perform another step and render
+# env.step(2) # Move left
+# # env.save_state('test.npz')
+# env.render()
 
-env.step(1) # Move right
-env.render()
+# env.step(1) # Move right
+# env.render()
 
-env.step(3)
-env.render()
+# env.step(3)
+# env.render()

@@ -102,34 +102,43 @@ class ActorCriticNet(nn.Module):
         critic_output = self.critic(merged)
         
         return actor_output, critic_output
-
+    
+    def select_action(self,probs, epsilon):
+        if np.random.rand() <= epsilon:
+            action = np.random.random_integers(0, 3)
+        else:
+            action = torch.multinomial(probs, 1).item()
+        return action
+    
+    @property
     def act(self, processed_states):
-        logits, _ = self.forward(processed_states)
-        probs = torch.softmax(logits, dim=-1)
-        action = torch.multinomial(probs, 1).item()
+        logits, _ = self.forward(processed_states) # actor_output
+        probs = torch.softmax(logits, dim=-1) # 计算动作概率分布
+        # action = torch.multinomial(probs, 1).item()
+        action = self.select_action(probs, 0.8) # 选择动作, epsilon=0.8, 80%概率选择最优动作
         print(f"action is {action}")
         return action
-
+    
     def evaluate(self, processed_states, action):
         logits, value = self.forward(processed_states)
         probs = torch.softmax(logits, dim=-1)
-        log_prob = torch.log(probs.gather(1, action))
-        entropy = -(probs * torch.log(probs)).sum(1)
+        log_prob = torch.log(probs.gather(1, action)) # 计算log_prob 对数概率
+        entropy = -(probs * torch.log(probs)).sum(1) # 计算概率分布的熵   
         return log_prob, entropy, value
 
-# 定义优化器参数共享
-def ensure_shared_grads(model, shared_model):
-    for param, shared_param in zip(model.parameters(), shared_model.parameters()):
-        if shared_param.grad is None:
-            shared_param._grad = param.grad
+# 共享本地模型以及世界模型参数
+# def ensure_shared_grads(model, shared_model):
+#     for param, shared_param in zip(model.parameters(), shared_model.parameters()):
+#         if shared_param.grad is None:
+#             shared_param._grad = param.grad
 
-# 主训练函数
-def train(global_model, optimizer, env_name, gamma, max_episodes, num_workers):
-    workers = []
-    for _ in range(num_workers):
-        worker = Worker(global_model, optimizer, env_name, gamma, max_episodes)
-        worker.start()
-        workers.append(worker)
-    for worker in workers:
-        worker.join()
+# # 主训练函数
+# def train(global_model, optimizer, env_name, gamma, max_episodes, num_workers):
+#     workers = []
+#     for _ in range(num_workers):
+#         worker = Worker(global_model, optimizer, env_name, gamma, max_episodes)
+#         worker.start()
+#         workers.append(worker)
+#     for worker in workers:
+#         worker.join()
 

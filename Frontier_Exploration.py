@@ -1,8 +1,6 @@
 import numpy as np
-from dummy_gym import DummyGym
-from dummy_gym import EXPLORED, UNEXPLORED
-
-env = DummyGym()
+from dummy_gym import *
+import random
 
 class FrontierExplorer:
     """
@@ -18,9 +16,9 @@ class FrontierExplorer:
         """
         self.env = env
 
-    def identify_frontiers(self, visit_count):
+    def identify_frontiers(self):
         """
-        Identify frontiers in the current Field of View (FOV).
+        Identify frontiers in the current visit count map.
         
         Args:
             visit_count: The visit count of the environment grid.
@@ -29,16 +27,13 @@ class FrontierExplorer:
             List of frontier coordinates.
         """
         frontiers = []
-        rows, cols = visit_count.shape
+        rows, cols = self.env.visit_count.shape
         for row in range(rows):
             for col in range(cols):
-                if visit_count[row, col] == UNEXPLORED:
-                    # Unexplored cell
+                if self.env.visit_count[row, col] == UNEXPLORED:
                     for neighbor in self.get_neighbors(row, col, rows, cols):
-# ****************************stuck here*****************************************
-                        if visit_count[neighbor] == EXPLORED:
+                        if self.env.visit_count[neighbor] == EXPLORED and self.env.map[neighbor] != OBSTACLE:
                             # Neighbor is explored
-                            print('find frontier')
                             frontiers.append((row, col))
                             break
         return frontiers
@@ -57,13 +52,13 @@ class FrontierExplorer:
         Returns:
             List of valid neighbor coordinates.
         """
-        directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+        directions = [(-STEP_SIZE, 0), (STEP_SIZE, 0), (0, -STEP_SIZE), (0, STEP_SIZE)]
         neighbor_list = [
             (row + dr, col + dc) # Calculate the neighbor coordinates
             for dr, dc in directions
             if 0 <= row + dr < rows and 0 <= col + dc < cols # Check if the neighbor is within the grid
         ]
-        print(f'neighbor_list is {neighbor_list}')
+        # print(f'neighbor_list is {neighbor_list}')
         return neighbor_list
 
     @staticmethod
@@ -78,13 +73,12 @@ class FrontierExplorer:
         Returns:
             The coordinate of the nearest frontier.
         """
-        print('selecting nearest frontier')
+        # print('selecting nearest frontier')
         nearest_frontier = min(frontiers, key=lambda x: abs(x[0] - car_pos[0]) + abs(x[1] - car_pos[1]))
-        print(f'going to nearest frontier {nearest_frontier}')
+        # print(f'going to nearest frontier {nearest_frontier}')
         return nearest_frontier
 
-    @staticmethod
-    def move_towards_target(car_pos, target):
+    def move_towards_target(self, car_pos, target):
         """
         Determine the action to move towards the target.
         
@@ -95,26 +89,33 @@ class FrontierExplorer:
         Returns:
             The action to move closer to the target (0: Up, 1: Down, 2: Left, 3: Right).
         """
-        if car_pos[0] > target[0]:
+        if car_pos[0] > target[0] and all(self.env.map[target[0]:car_pos[0], car_pos[1]] != OBSTACLE):
             return 0  # Up
-        elif car_pos[0] < target[0]:
+        elif car_pos[0] < target[0] and all(self.env.map[car_pos[0]:target[0], car_pos[1]] != OBSTACLE):
             return 1  # Down
-        elif car_pos[1] > target[1]:
+        elif car_pos[1] > target[1] and all(self.env.map[car_pos[0], target[1]:car_pos[1]] != OBSTACLE):
             return 2  # Left
-        elif car_pos[1] < target[1]:
-            return 3  # Right
+        else:
+            return 3
 
     def explore(self):
         """
         Perform the exploration process in the environment.
         """
         done = False
+        time_step = 0
+        image_list = []
+        titles = []
         while not done:
             # Get the current observation
+            combined_image = combine_all(self.env)
+            image_list.append(combined_image / np.max(combined_image) * 255)
+            titles.append(f"{time_step}")
+            save_to_gif(image_list, 'frontier_gif', 'frontier_exploration.gif', titles) if time_step % 3 == 0 else None
             visit_count, _, car_pos = self.env.observe()
             
             # Identify frontiers
-            frontiers = self.identify_frontiers(visit_count)
+            frontiers = self.identify_frontiers()
             
             if not frontiers:
                 # No frontiers left, exploration is complete
@@ -128,18 +129,24 @@ class FrontierExplorer:
             # Move towards the frontier
             print('moving towards frontier')
             action = self.move_towards_target(car_pos, target)
+            self.env.render() if action == None else None
             print('taking action')
             state, reward, done, _ = self.env.step(action)
             
             # Render the environment
-            self.env.render()
-            print(f"Action: {action}, Reward: {reward}")
+            self.env.render(map_type='visit_count') if time_step % 50 == 0 else None
+            cells_visited = self.env.visit_count[self.env.visit_count == EXPLORED].shape[0] # 计算已经访问的cell数量
+            cells = self.env.map_size[0]*self.env.map_size[1]
+            print(f"Cells visited: {cells_visited}/{cells} at time step: {time_step}")
+            print(f"Action: {action} at time step {time_step}")
+            time_step += 1
 
 
 # Example usage
 if __name__ == "__main__":
     # Initialize the environment
     env = DummyGym()
+    env.step(random.choice([0, 1, 2, 3]))
 
     # Create an instance of FrontierExplorer
     explorer = FrontierExplorer(env)

@@ -20,6 +20,7 @@ from gym import spaces
 from MapBuilder import MapBuilder
 import math
 import unittest
+from PIL import Image, ImageDraw, ImageFont
 
 # Map grid values
 OBSTACLE   = 0
@@ -493,8 +494,39 @@ class DummyGym(gym.Env):
             plt.imshow(display_map, cmap='gray', interpolation='none')
             plt.colorbar()
             plt.show()
-        
 
+def combine_all(env):
+    visit_with_car = env.visit_count.copy()
+    visit_with_car[env.map==OBSTACLE]=OBSTACLE
+    visit_with_car[env.car.up_bound_fov:env.car.down_bound_fov,env.car.left_bound_fov:env.car.right_bound_fov] = 1.5
+    visit_with_car[env.car.pos[0],env.car.pos[1]] = CAR
+    return visit_with_car
+
+def save_to_gif(image_list, output_path, gif_name, titles):
+    '''
+    Save a list of images to a gif with a title on each frame
+    '''
+    # turn image list into gif
+    pil_images = [Image.fromarray(image) for image in image_list]
+
+    # add title to each frame
+    for i, (image, title) in enumerate(zip(pil_images, titles)):
+        draw = ImageDraw.Draw(image)
+        font = ImageFont.load_default()
+        text_size = draw.textsize(title, font=font)
+        # text at right corner
+        text_position = (image.width - text_size[0], image.height - text_size[1])
+        draw.text(text_position, title, font=font, fill="red")
+
+    # save gif
+    path = os.path.join(output_path, gif_name)
+    pil_images[0].save(
+        path,
+        save_all=True,
+        append_images=pil_images[1:],  # other frames
+        duration=8.3,  # frame duration in ms
+        loop=0  # infinite loop
+    )
 # Uncomment the following code to perform an example usage:
 # env = DummyGym() 
 # # env.load_state('test.npz')
